@@ -1,0 +1,6 @@
+### DB Storage Folder
+./DB_DATAFILES/*
+
+### Editors
+./vscode/*
+./idea/*
