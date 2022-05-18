@@ -6,28 +6,42 @@
 #include "err_type.h"
 #include "catalog.h"
 
+struct IndexHead{
+    std::string indexName;
+    std::string tableName;
+    std::string attrName;
+};
 
 class IndexManager{
 public:
     IndexManager();
 
     /**
-     * @brief Create a Index object
+     * @brief Create an Index of an attr.
      * 
-     * @param TableName the name of table (file) as a string.
+     * @param tableName the name of table (file) as a string.
      * @param attr the name of the attrbute that user wish to build index on
      * @return db_err_t the handling result
      */
-    db_err_t CreateIndex(std::string TableName, const Attribute& attr);
+    db_err_t CreateIndex(const std::string tableName, const Attribute& attr);
 
     /**
-     * @brief Delete the index of an attribute.
+     * @brief Drop an Index of an attr.
+     * 
+     * @param tableName 
+     * @param attr 
+     * @return db_err_t 
+     */
+    db_err_t DropIndex(const std::string tableName, const Attribute& attr);
+
+    /**
+     * @brief Delete an index of a certain key.
      * 
      * @param tableName the name of table (file) as a string.
-     * @param attr the name of the attrbute that user wish to delete index on
+     * @param key the key that user wish to delete
      * @return db_err_t the handling result
      */
-    db_err_t DeleteIndex(std::string tableName, const Attribute& attr);
+    db_err_t DeleteIndex(const std::string tableName, const Data key);
 
     /**
      * @brief Find the Index based on the key (data)
@@ -37,7 +51,7 @@ public:
      * @param result[out] The container for result
      * @return db_err_t 
      */
-    db_err_t FindId(std::string tableName, Data key, std::vector<Index_t> result);
+    db_err_t FindId(const std::string tableName, const Data key, std::vector<Index_t>& result);
 
     /**
      * @brief Insert a key into the index table
@@ -46,10 +60,11 @@ public:
      * @param key The data to search for, as a key.
      * @return db_err_t 
      */
-    db_err_t InsertIndex(std::string tableName, Data Key);
+    db_err_t InsertIndex(const std::string tableName, const Data Key);
 
 private:
     std::string indexName;
+
 };
 
 #endif
