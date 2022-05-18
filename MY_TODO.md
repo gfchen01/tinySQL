@@ -1,6 +1,6 @@
 # TODO
 
-- [ ] design source code file structure, understand `CMakeLists.txt`
+- [x] design source code file structure, understand `CMakeLists.txt`
 
 - [ ] Understand Syntax Tree and Parser
 
