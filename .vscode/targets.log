@@ -1,4 +1,6 @@
 make all --print-data-base --no-builtin-variables --no-builtin-rules --question
+make: *** No rule to make target 'all'.  Stop.
+
 # GNU Make 4.2.1
 # Built for x86_64-pc-linux-gnu
 # Copyright (C) 1988-2016 Free Software Foundation, Inc.
@@ -6,7 +8,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue May 17 11:17:49 2022
+# Make data base, printed on Fri May 20 23:34:43 2022
 
 # Variables
 
@@ -47,7 +49,7 @@ VTE_VERSION = 6003
 # environment
 VSCODE_NLS_CONFIG = {"locale":"en-us","availableLanguages":{},"_languagePackSupport":true}
 # environment
-JOURNAL_STREAM = 9:47462
+JOURNAL_STREAM = 9:50732
 # environment
 XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
 # makefile
@@ -56,8 +58,6 @@ MAKEFILE_LIST :=
 @F = $(notdir $@)
 # environment
 IM_CONFIG_PHASE = 1
-# environment
-QT_IM_MODULE = fcitx
 # environment
 USERNAME = luke
 # environment
@@ -69,17 +69,15 @@ XDG_DATA_DIRS = /usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/d
 # environment
 ROS_ETC_DIR = /opt/ros/noetic/etc/ros
 # environment
-DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus,guid=16f0c0102adac1afb18a797f6282fe78
+DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
 VSCODE_VERBOSE_LOGGING = true
-# environment
-DISPLAY = :1
 # environment
 _ = /usr/bin/code
 # environment
 ROS_PACKAGE_PATH = /opt/ros/noetic/share
 # environment
-MANAGERPID = 4531
+MANAGERPID = 3937
 # environment
 ROS_PYTHON_VERSION = 3
 # environment
@@ -93,13 +91,13 @@ CLUTTER_IM_MODULE = fcitx
 # default
 MAKE_HOST := x86_64-pc-linux-gnu
 # environment
-NO_PROXY = localhost
+PATH = /opt/ros/noetic/bin:/home/luke/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/opt/mssql-tools/bin
 # environment
 XDG_SESSION_DESKTOP = ubuntu
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/Homurac-msi:@/tmp/.ICE-unix/5160,unix/Homurac-msi:/tmp/.ICE-unix/5160
+SESSION_MANAGER = local/Homurac-msi:@/tmp/.ICE-unix/4204,unix/Homurac-msi:/tmp/.ICE-unix/4204
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
@@ -109,9 +107,9 @@ XDG_MENU_PREFIX = gnome-
 # environment
 VSCODE_LOG_STACK = false
 # environment
-all_proxy = socks://127.0.0.1:7891/
+ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = 8897045ee210461d83abfa1bff16b9b9
+INVOCATION_ID = d4df80ba28464560a712efd464facefe
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -122,12 +120,12 @@ LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:
 ROS_DISTRO = noetic
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
+# environment
+GIO_LAUNCHED_DESKTOP_FILE_PID = 7606
 # automatic
 %F = $(notdir $%)
 # environment
-HTTPS_PROXY = http://127.0.0.1:7890/
-# environment
-no_proxy = localhost
+DISPLAY = :1
 # environment
 GTK_IM_MODULE = fcitx
 # environment
@@ -137,7 +135,7 @@ PWD = /home/luke/Documents/DBS_MiniSQL_Code/DBS_2022_
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 5117
+SSH_AGENT_PID = 4161
 # environment
 PKG_CONFIG_PATH = /opt/ros/noetic/lib/pkgconfig
 # environment
@@ -159,7 +157,7 @@ VSCODE_CODE_CACHE_PATH = /home/luke/.config/Code/CachedData/da15b6fd3ef856477bf6
 # environment
 LOGNAME = luke
 # environment
-APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
 # automatic
 +F = $(notdir $+)
 # environment
@@ -179,13 +177,13 @@ MAKE = $(MAKE_COMMAND)
 # default
 MAKECMDGOALS := all
 # environment
-PATH = /opt/ros/noetic/bin:/home/luke/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/opt/mssql-tools/bin
+QT_IM_MODULE = fcitx
 # environment
 SHLVL = 1
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-83e466a7-6763-4a84-bef0-92f0b91b38e0.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-8566bdf3-7cd1-42d3-aaa0-35efaa300d4d.sock
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -206,6 +204,10 @@ ROSLISP_PACKAGE_DIRECTORIES =
 LC_TELEPHONE = zh_CN.UTF-8
 # default
 MAKE_COMMAND := make
+# environment
+OLDPWD = /home/luke/Documents/DBS_MiniSQL_Code
+# environment
+TERMINATOR_DBUS_PATH = /net/tenshu/Terminator2
 # default
 .VARIABLES := 
 # automatic
@@ -231,12 +233,9 @@ GDK_BACKEND = x11
 # environment
 LC_PAPER = zh_CN.UTF-8
 # environment
-NO_AT_BRIDGE = 1
-# environment
-HTTP_PROXY = http://127.0.0.1:7890/
-# environment
 QT_ACCESSIBILITY = 1
 # environment
+ 
 DEFAULTS_PATH = /usr/share/gconf/ubuntu.default.path
 # default
 MAKEFILES := 
@@ -244,10 +243,6 @@ MAKEFILES :=
 LC_NUMERIC = zh_CN.UTF-8
 # automatic
 <F = $(notdir $<)
-# environment
-https_proxy = http://127.0.0.1:7890/
-# environment
-ELECTRON_RUN_AS_NODE = 1
 # environment
 LC_MEASUREMENT = zh_CN.UTF-8
 # environment
@@ -259,15 +254,9 @@ PAGER = most
 # environment
 LC_ALL = C
 # environment
-DBUS_STARTER_BUS_TYPE = session
-# environment
 QT4_IM_MODULE = fcitx
-# environment
-GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/cb9658de_ffd1_44eb_b19f_dd438174d2e0
 # automatic
 ^F = $(notdir $^)
-# environment
-GNOME_TERMINAL_SERVICE = :1.119
 # default
 SUFFIXES := 
 # environment
@@ -276,17 +265,10 @@ CHROME_DESKTOP = code-url-handler.desktop
 WINDOWPATH = 2
 # default
 .INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
- 
-make: *** No rule to make target 'all'.  Stop.
-
 # environment
 LC_IDENTIFICATION = zh_CN.UTF-8
-# environment
-ALL_PROXY = socks://127.0.0.1:7891/
 # default
 .RECIPEPREFIX := 
-# environment
-http_proxy = http://127.0.0.1:7890/
 # environment
 LC_ADDRESS = zh_CN.UTF-8
 # environment
@@ -294,11 +276,13 @@ LANG = C
 # environment
 TERM = xterm-256color
 # environment
-VSCODE_PID = 21041
+TERMINATOR_DBUS_NAME = net.tenshu.Terminator23558193cd9818af7fe4d2c2f5bd9d00f
 # environment
-DBUS_STARTER_ADDRESS = unix:path=/run/user/1000/bus,guid=16f0c0102adac1afb18a797f6282fe78
+VSCODE_PID = 7854
+# environment
+TERMINATOR_UUID = urn:uuid:089ba6b2-ac4d-4a53-bec0-07a154496734
 # variable set hash-table stats:
-# Load=142/1024=14%, Rehash=0, Collisions=28/164=17%
+# Load=134/1024=13%, Rehash=0, Collisions=23/156=15%
 
 # Pattern-specific Variable Values
 
@@ -306,9 +290,9 @@ DBUS_STARTER_ADDRESS = unix:path=/run/user/1000/bus,guid=16f0c0102adac1afb18a797
 
 # Directories
 
-# . (device 66306, inode 7372940): 11 files, no impossibilities.
+# . (device 66306, inode 7372940): 19 files, no impossibilities.
 
-# 11 files, no impossibilities in 1 directories.
+# 19 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -358,12 +342,12 @@ GNUmakefile:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 19 / storage = 153 B / avg = 8 B
-# current buf: size = 8162 B / used = 153 B / count = 19 / avg = 8 B
+# strcache buffers: 1 (0) / strings = 27 / storage = 257 B / avg = 9 B
+# current buf: size = 8162 B / used = 257 B / count = 27 / avg = 9 B
 
-# strcache performance: lookups = 22 / hit rate = 13%
+# strcache performance: lookups = 30 / hit rate = 10%
 # hash-table stats:
-# Load=19/8192=0%, Rehash=0, Collisions=1/22=5%
-# Finished Make data base on Tue May 17 11:17:49 2022
+# Load=27/8192=0%, Rehash=0, Collisions=1/30=3%
+# Finished Make data base on Fri May 20 23:34:43 2022
 
  

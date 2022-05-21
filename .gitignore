@@ -2,8 +2,8 @@
 ./DB_DATAFILES/*
 
 ### Editors
-./vscode/*
-./idea/*
+.vscode/*
+.idea/*
 
 ### Personal files
 ./MY_TODO

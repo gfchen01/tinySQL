@@ -66,16 +66,10 @@ public:
      */
     BP_NODE_T* FindNode(key_t key);
 
-    /**
-     * @brief Print the tree. For debug purpose
-     * 
-     * @param root 
-     * @param depth 
-     */
-    void PrintTree(BP_NODE_T* root, int depth){ //Recursive print (debug)
+    void PrintTreeRecurse(BP_NODE_T* root, int depth){ //Recursive print (debug)
         assert(root != nullptr);
 
-        std::cout << "Depth:" <<depth <<" Keys: \n";
+        std::cout << "Depth:" << depth <<" Keys: \n";
         for (auto item : root->key_field){
             std::cout << item << ',' ;
         }
@@ -83,9 +77,17 @@ public:
 
         if(!root->isLeaf){
             for (BP_NODE_T* bp_n_ptr : root->ptr_field){
-                PrintTree(bp_n_ptr, depth + 1);
+                PrintTreeRecurse(bp_n_ptr, depth + 1);
             }
         }
+    }
+
+    /**
+     * @brief Print the tree. For debug purpose
+     * 
+     */
+    void PrintTree(){
+        PrintTreeRecurse(root, 0);
     }
 
 private:
@@ -138,15 +140,17 @@ BP_NODE_T* BP_TREE_T::FindNode(key_t key){
         }
     }
 
-    size_t i = 0;
-    while(i < C->key_field.size() && C->key_field.at(i) != key){
-        i += 1;
-    }
+    return C;
 
-    if (i == C->key_field.size()) return nullptr; //No corresponding value
-    else {
-        return C;
-    }
+    // size_t i = 0;
+    // while(i < C->key_field.size() && C->key_field.at(i) < key){
+    //     i += 1;
+    // }
+
+    // if (i == C->key_field.size()) return nullptr; //No corresponding value
+    // else {
+    //     return C;
+    // }
 }
 
 KEY_VALUE_T_DECLARE
@@ -171,7 +175,7 @@ bool BP_TREE_T::Insert_in_Parent(key_t key, BP_NODE_T* prev_leaf, BP_NODE_T* spl
                     // Insertion happens "before" the given iterator
                     parent->ptr_field.insert(parent->ptr_field.begin() + i + 1, split);
                     parent->key_field.insert(parent->key_field.begin() + i, key);
-                    parent->ptr_field.at(i+1)->parent = parent;
+                    split->parent = parent;
                     break;
                 }
             }
@@ -188,6 +192,7 @@ bool BP_TREE_T::Insert_in_Parent(key_t key, BP_NODE_T* prev_leaf, BP_NODE_T* spl
             for (i = 0; i < parent->ptr_field.size(); ++i){ //TODO: May change it to bisearch
                 if(parent->ptr_field.at(i) == prev_leaf){
                     parent->ptr_field.insert(parent->ptr_field.begin() + i + 1, split);
+                    split->parent = parent;
                     parent->key_field.insert(parent->key_field.begin() + i, key);
                     break;
                 }
@@ -222,7 +227,7 @@ KEY_VALUE_T_DECLARE
 bool BP_TREE_T::Insert_in_Leaf(key_t key, value_t val, BP_NODE_T* leaf){
     assert(leaf->isLeaf);
 
-    size_t i;
+    size_t i = 0;
     while(i < leaf->key_field.size() && leaf->key_field.at(i) < key){
         ++i;
     }
@@ -285,8 +290,9 @@ bool BP_TREE_T::Insert(key_t key, value_t val){
             /// Set parent
             split->parent = leaf->parent;
 
-            Insert_in_Parent(key, leaf, split);
+            Insert_in_Parent(split->key_field.front(), leaf, split);
         }
+        return true;
     }
 }
 
