@@ -5,5 +5,9 @@
 .vscode/*
 .idea/*
 
+#build
+build
+cmake-build-debug
+
 ### Personal files
 ./MY_TODO
