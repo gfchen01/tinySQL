@@ -1,12 +1,13 @@
 #include "bpTree.h"
 #include <iostream>
 #include <random>
+#include <vector>
 
 using namespace std;
 
 int main()
 {
-    Bp_tree<int, int> T(5);
+    Bp_tree<int, int> T(10);
 
     for(int i=10; i<50; i++)
     {
@@ -20,9 +21,15 @@ int main()
     }
 
     // T.PrintTree();
+    
+    for (int i = 10; i < 50; i += 2){
+        T.Delete(i);
+    }
 
-    auto node = T.FindNode(35);
-    for (auto key : node->key_field){
-        cout << key << " " ;
+    vector<int> value_ret;
+    bool success = T.FindRange(-15, 37, value_ret);
+
+    for (auto value : value_ret){
+        cout << value << " " ;
     }
 }
