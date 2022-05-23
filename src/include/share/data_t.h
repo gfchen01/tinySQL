@@ -27,7 +27,10 @@ struct Data{
     float f_data;
     std::string str_data;
 };
-
+struct Where{
+    Data data;
+    Operator relation_operator;
+};
 //used to confirm the attribute, max32
 /**
  * @brief The attributes for a schema
