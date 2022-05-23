@@ -198,8 +198,6 @@ int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block
     Frames[page_id].setBlockId(block_id);
     Frames[page_id].setPinCount(1);
     Frames[page_id].setDirty(false);
-    //Frames[page_id].setRef(true);
-    //Frames[page_id].setTime();
     Frames[page_id].setAvaliable(false);
     return 0;
 }
@@ -264,7 +262,6 @@ int BufferManager::getEmptyPageId(){
             if(Frames[i].getPinCount() == 0 && Frames[i].getTime() < now){
                 current_position_ = i;
                 now = Frames[i].getTime();
-                //std::cout << "@";
             }
         }
         if (Frames[current_position_].getDirty() == true) {
