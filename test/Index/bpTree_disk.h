@@ -1,63 +1,20 @@
-/**
- * @file bpTree.h
- * @author CHEN Guofei (simonsatzju@gmail.com)
- * @brief A Bplus tree designed for 2022 MiniSQL project
- * @version 0.1
- * @date 2022-05-21
- * 
- * @copyright Copyright (c) 2022
- *
- * Type declarations:
- * There 3 things in a Bp_node: key, value and ptr
- * <Key> is the corresponding attribute value to build index on.
- * <Value> only occurs in leaf nodes. They are aligned with key,
- * and points to the record in a table.
- * <ptr> Is the pointer to Bp_nodes. Users should never change them.
- *
- * For leaf nodes, there is only one element in ptr_field, which points
- * to next leaf node. It's designed for range search.
- *
- */
-#ifndef BPTREE_H
-#define BPTREE_H
+#ifndef BPTREE_DISK_H
+#define BPTREE_DISK_H
 
 #include <vector>
 #include <iostream>
 #include <cassert>
+#include "bpTree_block.h"
+#include "buffer_manager.h"
 
-#define KEY_VALUE_T_DECLARE template<typename key_t, typename value_t>
-#define BP_NODE_T Bp_node<key_t, value_t>
 #define BP_TREE_T Bp_tree<key_t, value_t>
-
-KEY_VALUE_T_DECLARE
-struct Bp_node{
-    bool isLeaf = false;
-
-    std::vector<key_t> key_field; ///< the field for keys
-    std::vector<value_t> value_field; ///< the field for values
-    std::vector<Bp_node*> ptr_field; ///< the field for pointers
-
-    BP_NODE_T* parent = nullptr;
-
-    /**
-     * Find the position of a key in the node.
-     * @param key
-     * @return The index of key in key_field; -1 if failed
-     */
-    size_t FindPos_at_Node (key_t key) const{
-        for (size_t i = 0; i < key_field.size(); ++i){
-            if (key_field.at(i) == key){
-                return i;
-            }
-        }
-        return -1; // Convert to unsigned int max.
-    }
-};
+#define BP_TREE_LEAF_T bpTree_Leaf<key_t, value_t>
+#define BP_TREE_INTERNAL_T bpTree_Internal<key_t, blockId_t>
 
 KEY_VALUE_T_DECLARE
 class Bp_tree{
 public:
-    Bp_tree(size_t _degree = 4):degree(_degree){};
+    Bp_tree(BufferManager* buf_manager):_bfm(buf_manager){};
 
     /**
      * @brief Basic insertion to the tree.
@@ -110,18 +67,11 @@ public:
      */
     bool UpdateIndex(key_t former_key, key_t new_key);
 
-    /**
-     * @brief Print the tree. For debug purpose
-     *
-     */
-    void PrintTree(){
-        PrintTreeRecurse(root, 0);
-    }
-
 private:
-    size_t degree;
-    BP_NODE_T* root = nullptr;
+    blockId_t _root_id;
+    std::string _current_index_name;
 
+    BufferManager* _bfm;
 
     /**
      * @brief Find the leaf node where the key-value stays
@@ -129,7 +79,7 @@ private:
      * @param key Search key
      * @return BP_NODE_T* Result
      */
-    BP_NODE_T* FindNode(key_t key);
+    blockId_t FindNode(key_t key);
 
     /**
      * @brief Simply insert in a leaf node.
@@ -140,18 +90,19 @@ private:
      * @return true insertion success
      * @return false insertion failure
      */
-    bool Insert_in_Leaf(key_t key, value_t val, BP_NODE_T* leaf);
+    bool Insert_in_Leaf(key_t key, value_t val, BP_TREE_LEAF_T* leaf);
 
     /**
      * @brief Insert in a parent. May split. Recursive call.
      *
      * @param key the smallest search key in split (the right one when splitting)
-     * @param prev_leaf left split node, whose pointer is in its parent->ptr_field
+     * @param prev_leaf_id left split node, whose pointer is in its parent->ptr_field
      * @param split right split node. The new node.
      * @return true Insert success
      * @return false Insert failure
      */
-    bool Insert_in_Parent(key_t key, BP_NODE_T* prev_leaf, BP_NODE_T* split);
+    template<typename Node>
+    bool Insert_in_Parent(key_t key, Node* prev_leaf, Node* split);
 
     /**
      * @brief Delete in the parent based on child pointer.
@@ -159,33 +110,29 @@ private:
      * @param to_delete_child The child to be removed
      * @return true Delete success
      */
-    bool Delete_in_Parent(BP_NODE_T* to_delete_child);
-
-    void PrintTreeRecurse(BP_NODE_T* root, int depth){ //Recursive print (debug)
-        assert(root != nullptr);
-
-        std::cout << "Depth:" << depth <<" Keys: \n";
-        for (auto item : root->key_field){
-            std::cout << item << ',' ;
-        }
-        std::cout << std::endl;
-
-        if(!root->isLeaf){
-            for (BP_NODE_T* bp_n_ptr : root->ptr_field){
-                PrintTreeRecurse(bp_n_ptr, depth + 1);
-            }
-        }
-    }
+    template<typename Node>
+    bool Delete_in_Parent(Node* to_delete_child);
 };
 
-KEY_VALUE_T_DECLARE
-BP_NODE_T* BP_TREE_T::FindNode(key_t key){
-    BP_NODE_T* C = root;
-    assert(C->key_field.size() > 0);
 
-    while(!C->isLeaf){
+KEY_VALUE_T_DECLARE
+blockId_t BP_TREE_T::FindNode(key_t key){
+    char* temp_root = _bfm->getPage(PATH::INDEX_PATH + _current_index_name, _root_id);
+    BP_TREE_LEAF_T* root = reinterpret_cast<BP_TREE_LEAF_T>(temp_root);
+
+    if(!root->isLeaf()){
+        BP_TREE_INTERNAL_T* internal_ptr = reinterpret_cast<BP_TREE_INTERNAL_T>(root);
+        while(!internal_ptr->isLeaf()){
+
+        }
+    }
+    else if (root->_blockType == INVALID_BLOCK){
+        return INVALID_BLOCK_ID;
+    }
+
+    while(!root->_blockType == ){
         size_t i = 0;
-        while(i < C->key_field.size() && C->key_field.at(i) < key){
+        while(i < root->_size && root->key_field.at(i) < key){
             i += 1;
         }
 
@@ -498,8 +445,6 @@ bool BP_TREE_T::Delete(key_t key) {
             Delete_in_Parent(leaf);
 
             delete leaf;
-
-            return true;
         }
         else{ // Redistribution between two leaves
             if (is_predecessor){ // leaf is the predecessor of sibling
@@ -520,9 +465,8 @@ bool BP_TREE_T::Delete(key_t key) {
 
                 parent->key_field.at(i - 1) = leaf->key_field.front(); // The separation key
             }
-
-            return true;
         }
+        return true;
     }
 }
 

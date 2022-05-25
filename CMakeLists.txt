@@ -20,7 +20,6 @@ add_executable(MiniSQL
         src/include/share/config.h
         src/include/share/data_t.h
         src/include/share/err_type.h
-        src/index/bpTree.h
         src/index/index.cpp
         test/Index/Bp_tree_test.cpp
         test/Index/bpTree.h)

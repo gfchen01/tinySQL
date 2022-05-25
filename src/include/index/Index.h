@@ -5,6 +5,7 @@
 #include "config.h"
 #include "err_type.h"
 #include "catalog.h"
+#include "bpTree.h"
 
 struct IndexHead{
     std::string indexName;
@@ -20,7 +21,7 @@ public:
      * @brief Create an Index of an attr.
      * 
      * @param tableName the name of table (file) as a string.
-     * @param attr the name of the attrbute that user wish to build index on
+     * @param attr[in] the name of the attribute that user wish to build index on
      * @return db_err_t the handling result
      */
     db_err_t CreateIndex(const std::string tableName, const Attribute& attr);
@@ -64,7 +65,7 @@ public:
 
 private:
     std::string indexName;
-
+    Bp_tree<Data, Index_t> index_tree;
 };
 
 #endif

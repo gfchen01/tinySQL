@@ -2,34 +2,23 @@
 #include <iostream>
 #include <random>
 #include <vector>
+#include "bpTree_block.h"
 
 using namespace std;
 
 int main()
 {
-    Bp_tree<int, int> T(10);
-
-    for(int i=10; i<50; i++)
-    {
-        T.Insert(i, i);
-    }
-    for (int i=9; i>0; --i){
-        T.Insert(i, i);
-    }
-    for (int i = -30; i<0; ++i){
-        T.Insert(i, i);
-    }
-
-    // T.PrintTree();
+    bpTree_Block<int, int> x1;
+    bpTree_Leaf<int, int> x2;
+    bpTree_Internal<int, int> x3;
     
-    for (int i = 10; i < 50; i += 2){
-        T.Delete(i);
-    }
+    x2._size = 3;
+    auto ptr_x2 = &x2;
+    bpTree_Leaf<int, int>* x4 = reinterpret_cast<bpTree_Leaf<int, int>*>(ptr_x2);
 
-    vector<int> value_ret;
-    bool success = T.FindRange(-15, 37, value_ret);
+    std::pair<int, int> x[0];
 
-    for (auto value : value_ret){
-        cout << value << " " ;
-    }
+    cout << x4->_size;
+    // cout << sizeof(x1) << "," << sizeof(x2) << ", " << sizeof(x3) << endl;
+    // cout << sizeof(blockId_t);
 }
