@@ -11,6 +11,7 @@
 #ifndef _BUFFER_MANAGER_H_
 #define _BUFFER_MANAGER_H_ 1
 
+#define pageId_t int32_t
 #include <cstdio>
 #include <iostream>
 #include <vector>
@@ -59,18 +60,21 @@ class BufferManager {
         BufferManager(int frame_size);
         ~BufferManager();
         char* getPage(std::string file_name , int block_id); /**< 通过页号得到页的句柄(一个页的头地址) */
+        char* getPage(std::string file_name , int block_id , pageId_t& pageId);
         void modifyPage(int page_id); /**< 标记page_id所对应的页已经被修改 */
         void pinPage(int page_id); /**< 钉住一个页 */
         int unpinPage(int page_id); /**< 解除一个页的钉住状态(需要注意的是一个页可能被多次钉住，该函数只能解除一次),如果对应页的pin_count_为0，则返回-1 */
         int flushPage(int page_id , std::string file_name , int block_id); /**< 将对应内存页写入对应文件的对应块。 */
-        int getPageId(std::string file_name , int block_id); /**< 获取对应文件的对应块在内存中的页号，没有找到返回-1 */
+        pageId_t getPageId(std::string file_name , int block_id); /**< 获取对应文件的对应块在内存中的页号，没有找到返回-1 */
+        int getBlockNum(std::string file_name); /**< 计算文件总块数 */ 
     private:
         Page* Frames; /**< 缓冲池，实际上就是一个元素为Page的数组，实际内存空间将分配在堆上 */
         int frame_size_; /**< 记录总页数 */
         int current_position_; /**< 时钟替换策略需要用到的变量 */
         void initialize(int frame_size); /**< 实际初始化函数 */
-        int getEmptyPageId(); /**< 获取一个闲置的页的页号 */
+        pageId_t getEmptyPageId(); /**< 获取一个闲置的页的页号 */
         int loadDiskBlock(int page_id , std::string file_name , int block_id); /**< 将对应文件的对应块载入对应内存页，对于文件不存在返回-1，否则返回0 */
 };
+
 
 #endif
