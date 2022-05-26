@@ -133,9 +133,18 @@ char* BufferManager::getPage(std::string file_name , int block_id){
         page_id = getEmptyPageId();
         loadDiskBlock(page_id , file_name , block_id);
     }
-    std::cout << "$" << page_id << "$" << Frames[page_id].getTime() << std::endl;
     Frames[page_id].setTime();
     return Frames[page_id].getBuffer();    
+}
+char* BufferManager::getPage(std::string file_name , int block_id , pageId_t& pageId){
+    pageId_t page_id = getPageId(file_name , block_id);
+    if (page_id == -1) {
+        page_id = getEmptyPageId();
+        loadDiskBlock(page_id , file_name , block_id);
+    }
+    pageId = page_id;
+    Frames[page_id].setTime();
+    return Frames[page_id].getBuffer();   
 }
 /**
  * @brief 标记页是否被修改
@@ -198,6 +207,8 @@ int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block
     Frames[page_id].setBlockId(block_id);
     Frames[page_id].setPinCount(1);
     Frames[page_id].setDirty(false);
+    //Frames[page_id].setRef(true);
+    //Frames[page_id].setTime();
     Frames[page_id].setAvaliable(false);
     return 0;
 }
@@ -234,7 +245,7 @@ int BufferManager::flushPage(int page_id , std::string file_name , int block_id)
  * @param block_id 块ID
  * @return int 找到返回对应页ID，否则返回-1
  */
-int BufferManager::getPageId(std::string file_name , int block_id) {
+pageId_t BufferManager::getPageId(std::string file_name , int block_id) {
     for (int i = 0;i < frame_size_;i++) {
         std::string tmp_file_name = Frames[i].getFileName();
         int tmp_block_id = Frames[i].getBlockId();
@@ -243,13 +254,27 @@ int BufferManager::getPageId(std::string file_name , int block_id) {
     }
     return -1;
 }
-
+/**
+ * @brief 获取文件块数
+ * 
+ * @param file_name 文件名
+ * @return int 块数
+ */
+int BufferManager::getBlockNum(std::string file_name){
+    char* p;
+    int block_num = -1;
+    do {
+        p = getPage(file_name, block_num + 1);
+        block_num++;
+    } while(p[0] != '\0');
+    return block_num;
+}
 /**
  * @brief 寻找一个闲置的页
  * 
  * @return int 返回闲置页ID
  */
-int BufferManager::getEmptyPageId(){
+pageId_t BufferManager::getEmptyPageId(){
     for (int i = 0;i < frame_size_;i++) {
         if (Frames[i].getAvaliable() == true)
             return i;
@@ -262,6 +287,7 @@ int BufferManager::getEmptyPageId(){
             if(Frames[i].getPinCount() == 0 && Frames[i].getTime() < now){
                 current_position_ = i;
                 now = Frames[i].getTime();
+                //std::cout << "@";
             }
         }
         if (Frames[current_position_].getDirty() == true) {
