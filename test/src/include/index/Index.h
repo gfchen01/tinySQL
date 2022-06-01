@@ -1,17 +1,11 @@
 #ifndef INDEX_H
 #define INDEX_H
 
-#include "data_t.h"
-#include "config.h"
-#include "err_type.h"
-#include "catalog.h"
-#include "bpTree.h"
-
-struct IndexHead{
-    std::string indexName;
-    std::string tableName;
-    std::string attrName;
-};
+#include "share/data_t.h"
+#include "share/config.h"
+#include "share/err_type.h"
+#include "catalog/catalog.h"
+#include "index/bpTree_disk.h"
 
 class IndexManager{
 public:
@@ -45,7 +39,7 @@ public:
     db_err_t DeleteIndex(const std::string tableName, const Data key);
 
     /**
-     * @brief Find the Index based on the key (data)
+     * @brief Find the Index of a  based on the key (data)
      * 
      * @param tableName 
      * @param key The data to search for, as a key.

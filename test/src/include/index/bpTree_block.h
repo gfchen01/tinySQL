@@ -1,14 +1,16 @@
 #ifndef BPTREE_BLOCK_H
 #define BPTREE_BLOCK_H
 
-#include "buffer_manager.h"
+#include "buffer/buffer_manager.h"
 #include "share/config.h"
+
+#include <cassert>
 
 #define KEY_VALUE_T_DECLARE template<typename key_t, typename value_t>
 #define MAPPING_T std::pair<key_t, value_t>
 
 #define LEAF_HEADER_SIZE 24
-#define INTERNAL_HEADER_SIZE 20
+#define INTERNAL_HEADER_SIZE 24
 #define MAX_LEAF_SIZE ((BLOCKSIZE - LEAF_HEADER_SIZE) / sizeof(std::pair<key_t, value_t>) - 1)
 #define MAX_INTERNAL_SIZE ((BLOCKSIZE - INTERNAL_HEADER_SIZE) / sizeof(std::pair<key_t, value_t>) - 1)
 #define INVALID_BLOCK_ID -1
@@ -52,6 +54,10 @@ struct bpTree_Block{
     blockType_t _blockType;
     blockId_t _parent_block_id;
     blockId_t _block_id;
+    db_size_t _size;
+    db_size_t _max_size;
+    blockId_t _next_block_id;
+
 };
 
 KEY_VALUE_T_DECLARE
@@ -65,9 +71,9 @@ struct bpTree_Leaf : public bpTree_Block{
     void init(blockId_t myBId, blockId_t parentId, blockId_t next_block_id){
         bpTree_Block::init(myBId, parentId);
         bpTree_Block::_blockType = LEAF_BLOCK;
-        _next_block_id = next_block_id;
-        _size = 0;
-        _max_size = MAX_LEAF_SIZE;
+        bpTree_Block::_next_block_id = next_block_id;
+        bpTree_Block::_size = 0;
+        bpTree_Block::_max_size = MAX_LEAF_SIZE;
     }
 
     /**
@@ -77,10 +83,12 @@ struct bpTree_Leaf : public bpTree_Block{
      * @param key The given key
      * @return
      */
-    size_t leaf_biSearch(key_t key){
-        size_t left = 0; // Every pair is used.
-        size_t right = _size - 1;
-        size_t mid;
+    db_size_t leaf_biSearch(key_t key){
+        int left = 0; // Every pair is used.
+        if (_size == 0)
+            return 0;
+        int right = _size - 1;
+        int mid;
         while(left <= right){
             mid = (left + right) / 2;
             if (_k_rowid_pair[mid].first < key){
@@ -93,13 +101,11 @@ struct bpTree_Leaf : public bpTree_Block{
                 right = mid - 1;
             }
         }
-        return left;
+        assert(left >= 0);
+        return (db_size_t)left;
     }
 
-    size_t _size;
-    size_t _max_size;
-    blockId_t _next_block_id;
-    MAPPING_T _k_rowid_pair[MAX_LEAF_SIZE];
+    MAPPING_T _k_rowid_pair[MAX_LEAF_SIZE + 1]; ///< One extra space for spanning.
 };
 
 KEY_VALUE_T_DECLARE
@@ -114,8 +120,8 @@ public:
         bpTree_Block::init(myBId, parentId);
         bpTree_Block::_blockType = INTERNAL_BLOCK;
 
-        _size = 0;
-        _max_size = MAX_INTERNAL_SIZE;
+        bpTree_Block::_size = 0;
+        bpTree_Block::_max_size = MAX_INTERNAL_SIZE;
     }
 
     /**
@@ -123,10 +129,10 @@ public:
      * @param key The given key
      * @return
      */
-    size_t internal_biSearch(key_t key){
-        size_t left = 1; // The first _k_child_pair doesn't contain a valid key.
-        size_t right = _size - 1;
-        size_t mid;
+    db_size_t internal_biSearch(key_t key){
+        db_size_t left = 1; // The first _k_child_pair doesn't contain a valid key.
+        db_size_t right = _size - 1;
+        db_size_t mid;
         while(left <= right){
             mid = (left + right + 1) / 2;
             if (_k_child_pair[mid].first < key){
@@ -142,9 +148,7 @@ public:
         return right;
     }
 
-    size_t _size;
-    size_t _max_size;
-    MAPPING_T _k_child_pair[MAX_INTERNAL_SIZE];
+    MAPPING_T _k_child_pair[MAX_INTERNAL_SIZE + 1]; ///< One extra space for spanning.
 };
 
 

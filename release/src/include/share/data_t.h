@@ -15,6 +15,7 @@ enum struct BASE_SQL_ValType {INT,FLOAT,STRING}; ///< MiniSQL supported data typ
 
 enum struct S_ATTRIBUTE {Null,PrimaryKey,Unique}; ///< Special attribute types.
 
+;
 
 /**
  * @brief Basic data element in a tuple.
@@ -22,10 +23,12 @@ enum struct S_ATTRIBUTE {Null,PrimaryKey,Unique}; ///< Special attribute types.
  * types: int:-1 float:0 stirng:1-255
  */
 struct Data{
-    BASE_SQL_ValType type;       
-    int int_data;
-    float f_data;
-    std::string str_data;
+    BASE_SQL_ValType type;
+    union {
+        int i_data;
+        float f_data;
+        char s_data[20];
+    } data_meta;
 };
 struct Where{
     Data data;

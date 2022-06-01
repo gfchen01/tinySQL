@@ -5,8 +5,8 @@
 #include <iostream>
 #include <cassert>
 #include "bpTree_block.h"
-#include "buffer_manager.h"
-#include "err_type.h"
+#include "buffer/buffer_manager.h"
+#include "share/err_type.h"
 #include <cstring>
 
 #define BP_TREE_T Bp_tree<key_t, value_t>
@@ -81,7 +81,7 @@ public:
 private:
     blockId_t _root_id = INVALID_BLOCK_ID;
     std::string _index_fname;
-    size_t _file_block_count;
+    db_size_t _file_block_count;
 //    BP_TREE_BLOCK_T* header_ptr;
 //    pageId_t header_pageId; ///< The header page id in the buffer pool. The page is pinned.
 
@@ -119,6 +119,16 @@ private:
      */
     bool Insert_in_Parent(key_t key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_BLOCK_T* split);
 
+    /**
+     * @brief Delete in the parent based on child pointer.
+     *  Use many pointers because they are loaded and pinned. This will reduce cost
+     * @param to_delete_child The child to be removed
+     * @param sibling The sibling to the child. (Always the left sibling)
+     * @param parent Parent to the children
+     * @return true Delete success
+     */
+    bool Delete_in_Parent(BP_TREE_BLOCK_T* parent, db_size_t pos_sep);
+
     void loadPointer(BP_TREE_LEAF_T*& leaf, pageId_t& leaf_pageId, blockId_t b_id){
         char* raw = _bfm->getPage(PATH::INDEX_PATH + _index_fname, b_id, leaf_pageId);
         leaf = reinterpret_cast<BP_TREE_LEAF_T*>(raw);
@@ -140,21 +150,12 @@ private:
     }
 
     void setChildrenParent(BP_TREE_INTERNAL_T* internal){
-        for(size_t i = 0; i < internal->_size; ++i){
+        for(db_size_t i = 0; i < internal->_size; ++i){
             BP_TREE_BLOCK_T* child;
             loadPointer(child, internal->_k_child_pair[i].second);
             child->_parent_block_id = internal->_block_id;
         }
     }
-
-    /**
-     * @brief Delete in the parent based on child pointer.
-     *
-     * @param to_delete_child The child to be removed
-     * @return true Delete success
-     */
-    template<typename Node>
-    bool Delete_in_Parent(Node* to_delete_child);
 };
 
 KEY_VALUE_T_DECLARE
@@ -169,14 +170,13 @@ void BP_TREE_T::InitRoot(std::string indexFileName) {
     // Set _root_id to avoid expensive operations later;
     // and set the initial total block count of the file
     if (headBlock->_blockType == INVALID_BLOCK){ // Happens when no content except the header is in the file
-        _root_id = INVALID_BLOCK;
+        _root_id = INVALID_BLOCK_ID;
     }
     else{
         _root_id = FindRootBlockId(headBlock);
-        _file_block_count = _bfm->getFileSize(PATH::INDEX_PATH + indexFileName) /
-                PAGESIZE + 1;
     }
-
+    // Upper bound of the integer: fileSize / PAGESIZE
+    _file_block_count = (_bfm->getFileSize(PATH::INDEX_PATH + indexFileName) + PAGESIZE - 1) / PAGESIZE;
     _bfm->unpinPage(headPageId);
 }
 
@@ -184,7 +184,7 @@ KEY_VALUE_T_DECLARE
 blockId_t BP_TREE_T::FindRootBlockId(bpTree_Block *block) {
     assert(block->_blockType != INVALID_BLOCK);
 
-    while (block->_parent_block_id != INVALID_BLOCK){
+    while (block->_parent_block_id != INVALID_BLOCK_ID){
         loadPointer(block, block->_parent_block_id);
     }
 
@@ -192,25 +192,44 @@ blockId_t BP_TREE_T::FindRootBlockId(bpTree_Block *block) {
 }
 
 KEY_VALUE_T_DECLARE
+bool BP_TREE_T::FindValue(key_t key, value_t &result) {
+    pageId_t p_Id;
+    BP_TREE_LEAF_T* n = FindNode(key, p_Id);
+
+    if (n == nullptr) throw DB_KEY_NOT_FOUND;
+
+    db_size_t pos = n->leaf_biSearch(key);
+    result = n->_k_rowid_pair[pos].second;
+    if (n->_k_rowid_pair[pos].first == key){
+        return true;
+    }
+    else return false;
+}
+
+KEY_VALUE_T_DECLARE
 BP_TREE_LEAF_T* BP_TREE_T::FindNode(key_t key, pageId_t& leaf_pageId){
     pageId_t temp_pageId;
-    BP_TREE_LEAF_T* root;
+    BP_TREE_BLOCK_T* root;
+    if (_root_id == INVALID_BLOCK_ID){
+        return nullptr;
+    }
     loadPointer(root, temp_pageId, _root_id);
 
     BP_TREE_INTERNAL_T* internal_ptr;
-    if(!root->isLeaf()){
-        internal_ptr = reinterpret_cast<BP_TREE_INTERNAL_T*>(root);
-        while(!internal_ptr->isLeaf()){
-            size_t pos = internal_ptr->internal_biSearch(key); //The greatest key pos that is smaller or equal to the key.
-            blockId_t child_b_id = internal_ptr->_k_child_pair[pos].second;
-            loadPointer(internal_ptr, child_b_id, temp_pageId);
-        }
-    }
-    else if (root->_blockType == INVALID_BLOCK){
+    if (root->_blockType == INVALID_BLOCK){
         return nullptr;
     }
-    else{
+    else if(root->isLeaf()){
         internal_ptr = (BP_TREE_INTERNAL_T*)root; // Simply init. Make no sense.
+    }
+    else{
+        internal_ptr = static_cast<BP_TREE_INTERNAL_T*>(root);
+        while(!internal_ptr->isLeaf()){
+            //The greatest key pos that is smaller or equal to the key.
+            db_size_t pos = internal_ptr->internal_biSearch(key);
+            blockId_t child_b_id = internal_ptr->_k_child_pair[pos].second;
+            loadPointer(internal_ptr, temp_pageId, child_b_id);
+        }
     }
 
     // Make sure the page that internal_ptr pointing at is pinned!!!
@@ -230,6 +249,7 @@ bool BP_TREE_T::Insert_in_Parent(key_t key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_
         // TODO : Add pin page and not pin page for concurrency. Assume the page is not likely to be changed here.
         _file_block_count += 1;
 
+        _root_id = _file_block_count - 1;
         newRoot->init(_file_block_count - 1, INVALID_BLOCK_ID);
         newRoot->_size = 2;
         key_t trash;
@@ -247,13 +267,18 @@ bool BP_TREE_T::Insert_in_Parent(key_t key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_
         BP_TREE_INTERNAL_T* parent;
         pageId_t parent_pageId;
         loadPointer(parent, parent_pageId, prev_leaf->_parent_block_id);
+
+        if(parent->_blockType != INTERNAL_BLOCK){
+            loadPointer(parent, parent_pageId, prev_leaf->_parent_block_id);
+        }
+
         _bfm->pinPage(parent_pageId);
         _bfm->modifyPage(parent_pageId);
 
         // Directly insert the current key and pointer temporarily
-        size_t pos = parent->internal_biSearch(key); // This position should exactly be the separator of prev_leaf and its sibling
+        db_size_t pos = parent->internal_biSearch(key); // This position should exactly be the separator of prev_leaf and its sibling
         pos += 1; // The correct starting point to move.
-        size_t move_len = parent->_size - pos;
+        db_size_t move_len = parent->_size - pos;
 
         memmove(parent->_k_child_pair + pos + 1, parent->_k_child_pair + pos,  move_len * sizeof(parent->_k_child_pair[0]));
         parent->_size += 1;
@@ -273,15 +298,15 @@ bool BP_TREE_T::Insert_in_Parent(key_t key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_
 
             _file_block_count += 1;
             // CAUTION : remember to init the newly assigned block.
-            split_parent->init(_file_block_count, parent->_parent_block_id);
+            split_parent->init(_file_block_count - 1, parent->_parent_block_id);
 
             // Move keys and pointers to split.
-            size_t mid = (parent->_max_size + 1) / 2;
+            db_size_t mid = (parent->_max_size + 1) / 2;
             key_t right_smallest_key = parent->_k_child_pair[mid].first;
-            size_t move_len_split = (parent->_max_size + 1) - mid;
+            db_size_t move_len_split = (parent->_max_size + 1) - mid;
 
             // Because the first key is not used, we in fact abandoned the first key in split node.
-            memcpy(split_parent, parent + mid, move_len_split * sizeof(parent->_k_child_pair[0]));
+            memcpy(split_parent->_k_child_pair, parent->_k_child_pair + mid, move_len_split * sizeof(parent->_k_child_pair[0]));
             split_parent->_size = move_len_split;
             parent->_size = mid;
 
@@ -290,6 +315,7 @@ bool BP_TREE_T::Insert_in_Parent(key_t key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_
 
             ret = Insert_in_Parent(right_smallest_key, parent, split_parent);
             _bfm->unpinPage(split_pageId);
+            _bfm->unpinPage(parent_pageId);
             return ret;
         }
         else{
@@ -304,13 +330,14 @@ bool BP_TREE_T::Insert_in_Leaf(key_t key, value_t val, BP_TREE_LEAF_T* leaf){
     assert(leaf->isLeaf());
 //    assert(leaf->_size < leaf->_max_size);
 
-    size_t pos = leaf->leaf_biSearch(key);
+    db_size_t pos = leaf->leaf_biSearch(key);
 
     // TODO : Change this to throw
+    // Only allow unique key
     if (leaf->_k_rowid_pair[pos].first == key) return false;
 
     // Insert the key-val pair. The space should be pre-allocated at the initialization of node pages.
-    memmove(leaf->_k_rowid_pair + pos + 1, leaf->_k_rowid_pair + pos, sizeof(leaf->_k_rowid_pair) * (leaf->_size - pos));
+    memmove((void*)(leaf->_k_rowid_pair + pos + 1), (void*)(leaf->_k_rowid_pair + pos), sizeof(leaf->_k_rowid_pair[0]) * (leaf->_size - pos));
     leaf->_k_rowid_pair[pos] = std::make_pair(key, val);
     leaf->_size += 1;
 
@@ -322,16 +349,10 @@ bool BP_TREE_T::Insert(key_t key, value_t val){
     if (_root_id == INVALID_BLOCK_ID){ // Create a new root at block 0 of B+ tree file.
         _root_id = 0;
         pageId_t root_pageId;
-        char* root_page;
-        try{
-            root_page = _bfm->getPage(PATH::INDEX_PATH + _index_fname, _root_id, root_pageId);
-        }
-        catch(db_err_t& db_err){
-            throw db_err;
-        }
-        _bfm->pinPage(root_pageId);
-        BP_TREE_LEAF_T* root = reinterpret_cast<BP_TREE_LEAF_T*>(root_page);
+        BP_TREE_LEAF_T* root;
+        loadPointer(root, root_pageId, 0);
 
+        _bfm->pinPage(root_pageId);
         _bfm->modifyPage(root_pageId);
         root->init(0, INVALID_BLOCK_ID, INVALID_BLOCK_ID);
 
@@ -346,28 +367,33 @@ bool BP_TREE_T::Insert(key_t key, value_t val){
             return false;
         }
 
+        _bfm->modifyPage(leaf_pageId);
+
         if (leaf->_size < leaf->_max_size){ // Still have space
             Insert_in_Leaf(key, val, leaf);
+            _bfm->unpinPage(leaf_pageId);
         }
         else{
             assert(leaf->_size == leaf->_max_size);
 
+            BP_TREE_BLOCK_T* p;
+            BP_TREE_INTERNAL_T* p2;
+            pageId_t trash;
+            if(leaf->_block_id != _root_id){
+                loadPointer(p, leaf->_parent_block_id);
+                assert(p->_blockType == INTERNAL_BLOCK);
+
+                loadPointer(p2, trash, leaf->_parent_block_id);
+                assert(p2->_blockType == INTERNAL_BLOCK);
+            }
+
             pageId_t split_pageId;
-            char* split_ptr;
-            try{
-                split_ptr = _bfm->getPage(PATH::INDEX_PATH + _index_fname, _file_block_count, split_pageId);
-            }
-            catch(db_err_t db_err){
-                throw db_err;
-            }
-
-            _bfm->pinPage(split_pageId);
-            BP_TREE_LEAF_T* split = reinterpret_cast<BP_TREE_LEAF_T*>(split_ptr);
+            BP_TREE_LEAF_T* split;
+            loadPointer(split, split_pageId, _file_block_count);
             _file_block_count += 1;
-
+            _bfm->pinPage(split_pageId);
 
             _bfm->modifyPage(split_pageId);
-            _bfm->modifyPage(leaf_pageId);
             // Set the block_id, root_id, sibling, parent
             split->init(_file_block_count - 1, leaf->_parent_block_id, INVALID_BLOCK_ID);
             leaf->_next_block_id = split->_block_id;
@@ -377,8 +403,8 @@ bool BP_TREE_T::Insert(key_t key, value_t val){
 
             /// Copy values and keys, and set the **size**
             // The position right after the (max_size + 1)/2 th element. In this way, both split nodes contains more than max_size/2 elements
-            size_t i = (leaf->_max_size + 1) / 2;
-            size_t copy_len = (leaf->_max_size + 1) - i;
+            db_size_t i = (leaf->_max_size + 1) / 2;
+            db_size_t copy_len = (leaf->_max_size + 1) - i;
 
             memcpy(split->_k_rowid_pair, leaf->_k_rowid_pair + i, sizeof(leaf->_k_rowid_pair[0]) * copy_len);
             leaf->_size = i;
@@ -393,186 +419,249 @@ bool BP_TREE_T::Insert(key_t key, value_t val){
     }
 }
 
-//KEY_VALUE_T_DECLARE
-//bool BP_TREE_T::Delete_in_Parent(BP_NODE_T* to_delete_child){
-//    BP_NODE_T* parent = to_delete_child->parent;
-//
-//    // Delete the pointer to the child from its parent, and its "separation key"
-//    // Caller need to make sure that the abandoned child is the latter one in merging
-//    for (size_t i = 0; i < parent->ptr_field.size(); ++i){
-//        if (parent->ptr_field.at(i) == to_delete_child){
-//            parent->ptr_field.erase(parent->ptr_field.begin() + i);
-//            parent->key_field.erase(parent->key_field.begin() + i - 1);
-//            break;
-//        }
-//    }
-//
-//    if (parent == root){
-//        if (parent->ptr_field.size() == 1){
-//            root = parent->ptr_field.front();
+KEY_VALUE_T_DECLARE
+bool BP_TREE_T::Delete_in_Parent(BP_TREE_BLOCK_T* _parent, db_size_t pos_sep){
+    // Caller has set the modifyPage flag for these pointers!
+    auto parent = static_cast<BP_TREE_INTERNAL_T*>(_parent);
+
+    // Delete the pointer to the child from its parent, and its "separation key"
+    // Caller need to make sure that the abandoned child is the latter one in merging
+    memmove(parent->_k_child_pair + pos_sep, parent->_k_child_pair + pos_sep + 1,
+            (parent->_size - (pos_sep + 1)) * sizeof(parent->_k_child_pair[0]));
+    parent->_size -= 1;
+
+    if (parent->_block_id == _root_id){
+        if (parent->_size == 1){
+            _root_id = parent->_k_child_pair[0].second;
+            // TODO : Check the lazy delete (reorganize file)
+            parent->_blockType = INVALID_BLOCK;
 //            delete parent;
-//            return true;
-//        }
-//    }
-//    else if (parent->key_field.size() < (degree + 1) / 2){ // (int)(degree + 1)/2 is equivalent to degree/2 's upper integer
-//        BP_NODE_T* sibling;
-//        BP_NODE_T* grand_parent = parent->parent;
-//        key_t sep_key_in_grandparent;
-//        size_t i;
-//        bool is_predecessor;
-//        for (i = 0; i < grand_parent->ptr_field.size(); ++i){
-//            if (grand_parent->ptr_field.at(i) == parent) break;
-//        }
-//
-//        assert(i < grand_parent->ptr_field.size());
-//
-//        if (i < grand_parent->ptr_field.size() - 1){ // Not the last child
-//            sibling = grand_parent->ptr_field.at(i + 1);
-//            sep_key_in_grandparent = grand_parent->key_field.at(i);
-//            is_predecessor = true;
-//        }
-//        else{
-//            sibling = grand_parent->ptr_field.at(i - 1);
-//            sep_key_in_grandparent = grand_parent->key_field.at(i - 1);
-//            is_predecessor = false;
-//        }
-//
-//        // At most n - 1 keys in non-leaves
-//        if (parent->key_field.size() + sibling->key_field.size() < degree){ // Merge leaf and sibling
-//            if (is_predecessor) { // Parent is the predecessor
-//                auto temp = parent;
-//                parent = sibling;
-//                sibling = temp;
-//            }
-//            // Move the content in leaf to sibling, and set the child->parent pointer
-//            sibling->key_field.push_back(sep_key_in_grandparent);
-//            sibling->ptr_field.push_back(parent->ptr_field.front());
-//            sibling->ptr_field.back()->parent = sibling;
-//            for (size_t j = 0; j < parent->key_field.size(); ++j){
-//                sibling->key_field.push_back(parent->key_field.at(j));
-//                sibling->ptr_field.push_back(parent->ptr_field.at(j + 1));
-//                sibling->ptr_field.back()->parent = sibling;
-//            }
-//
-//            Delete_in_Parent(parent);
-//
+        }
+        return true;
+    }
+    else if (parent->_size < (parent->_max_size + 1) / 2){ // (int)(degree + 1)/2 is equivalent to degree/2 's upper integer
+        BP_TREE_INTERNAL_T* grandparent;
+        pageId_t grandparent_pageId;
+
+        BP_TREE_INTERNAL_T* parent_sibling;
+        pageId_t parentSib_pageId;
+
+        loadPointer(grandparent, grandparent_pageId, parent->_parent_block_id);
+        _bfm->pinPage(grandparent_pageId);
+
+        assert(grandparent->_blockType == INTERNAL_BLOCK); // Avoid invalid_block debug
+
+        key_t sep_key_in_grandparent;
+        db_size_t pos_sep_grand = grandparent->internal_biSearch(parent->_k_child_pair[0].first);
+        bool is_predecessor;
+
+        assert(grandparent->_k_child_pair[pos_sep_grand].second == parent->_block_id);
+
+        if (pos_sep_grand == grandparent->_size - 1){ // The last child
+            loadPointer(parent_sibling, parentSib_pageId, grandparent->_k_child_pair[pos_sep_grand - 1].second);
+            is_predecessor = false;
+            sep_key_in_grandparent = grandparent->_k_child_pair[pos_sep_grand].first;
+
+            assert(grandparent->_k_child_pair[pos_sep_grand].first == parent->_k_child_pair[0].first);
+        }
+        else{
+            pos_sep_grand += 1;
+            loadPointer(parent_sibling, parentSib_pageId, grandparent->_k_child_pair[pos_sep_grand].second);
+            is_predecessor = true;
+            sep_key_in_grandparent = grandparent->_k_child_pair[pos_sep_grand].first;
+
+            assert(grandparent->_k_child_pair[pos_sep_grand].first == parent_sibling->_k_child_pair[0].first);
+        }
+        _bfm->pinPage(parentSib_pageId);
+
+        // At most n - 1 keys in non-leaves
+        if (parent->_size + parent_sibling->_size < parent->_max_size){ // Merge leaf and sibling
+            if (is_predecessor) { // Parent is the predecessor
+                auto temp = parent;
+                parent = parent_sibling;
+                parent_sibling = temp;
+            }
+            // Move the content in parent to sibling, and
+            memcpy(parent_sibling->_k_child_pair + parent_sibling->_size, parent->_k_child_pair,
+                   parent->_size * sizeof(parent->_k_child_pair[0]));
+            parent_sibling->_size += parent->_size;
+            parent->_size = 0;
+
+            // set the child->parent pointer
+            for(db_size_t i = parent_sibling->_size - parent->_size; i < parent_sibling->_size; ++i){
+                BP_TREE_BLOCK_T* child;
+                loadPointer(child, parent_sibling->_k_child_pair[i].second);
+                child->_parent_block_id = parent_sibling->_block_id;
+            }
+            _bfm->unpinPage(parentSib_pageId);
+            Delete_in_Parent(grandparent, pos_sep_grand);
+            // Lazy delete
+            parent->_blockType = INVALID_BLOCK;
 //            delete parent;
-//
-//            return true;
-//        }
-//        else{ // Redistribute the keys and pointers
-//            if (is_predecessor){
-//                parent->key_field.push_back(sep_key_in_grandparent);
-//                parent->ptr_field.push_back(sibling->ptr_field.front());
-//                parent->ptr_field.back()->parent = parent;
-//
-//                grand_parent->key_field.at(i) = sibling->key_field.front();
-//
-//                sibling->key_field.erase(sibling->key_field.begin());
-//                sibling->ptr_field.erase(sibling->ptr_field.begin());
-//            }
-//            else{
-//                parent->key_field.insert(parent->key_field.begin(), sep_key_in_grandparent);
-//                parent->ptr_field.insert(parent->ptr_field.begin(), sibling->ptr_field.back());
-//                parent->ptr_field.front()->parent = parent;
-//
-//                grand_parent->key_field.at(i - 1) = sibling->key_field.back();
-//
-//                sibling->key_field.pop_back();
-//                sibling->ptr_field.pop_back();
-//            }
-//
-//            return true;
-//        }
-//    }
-//}
-//
-//KEY_VALUE_T_DECLARE
-//bool BP_TREE_T::Delete(key_t key) {
-//    BP_NODE_T* leaf = FindNode(key);
-//
-//    // Delete the key and value from leaf
-//    for (size_t i = 0; i < leaf->key_field.size(); ++i){
-//        if (leaf->key_field.at(i) == key){
-//            leaf->key_field.erase(leaf->key_field.begin() + i);
-//            leaf->value_field.erase(leaf->value_field.begin() + i);
-//            break;
-//        }
-//    }
-//
-//    if (leaf == root) return true;
-//        // Violate capacity constraint for leaf and non-root node
-//    else if (leaf->key_field.size() < degree / 2){ // (int)degree/2 is equivalent to (degree - 1)/2's upper integer
-//        BP_NODE_T* sibling;
-//        BP_NODE_T* parent = leaf->parent;
-//        key_t sep_key_in_parent;
-//        size_t i;
-//        bool is_predecessor;
-//        for (i = 0; i < parent->ptr_field.size(); ++i){
-//            if (parent->ptr_field.at(i) == leaf) break;
-//        }
-//        assert(i < parent->ptr_field.size());
-//        if (i < parent->ptr_field.size() - 1){ // Not the last element
-//            sibling = parent->ptr_field.at(i + 1);
-//            is_predecessor = true;
-//            sep_key_in_parent = parent->key_field.at(i);
-//        }
-//        else {
-//            sibling = parent->ptr_field.at(i - 1);
-//            is_predecessor = false;
-//            sep_key_in_parent = parent->key_field.at(i - 1);
-//        }
-//
-//        // At most n - 1 keys in leaves.
-//        if (sibling->key_field.size() + leaf->key_field.size() < degree){ // Merge leaf and sibling
-//            if (is_predecessor){ // leaf is the predecessor of sibling
-//                // Exchange the variables for convenience here
-//                auto temp = leaf;
-//                leaf = sibling;
-//                sibling = temp;
-//            }
-//
-//            // Move the content in leaf to sibling
-//            if (!leaf->ptr_field.empty()){
-//                sibling->ptr_field.front() = leaf->ptr_field.front();
-//            }
-//            for (size_t j = 0; j < leaf->key_field.size(); ++j){
-//                sibling->key_field.push_back(leaf->key_field.at(j));
-//                sibling->value_field.push_back(leaf->value_field.at(j));
-//            }
-//
-//            Delete_in_Parent(leaf);
-//
+            return true;
+        }
+        else{ // Redistribute the keys and pointers
+            if (is_predecessor){
+                parent->_k_child_pair[parent->_size] = parent_sibling->_k_child_pair[0];
+                parent->_size += 1;
+                parent_sibling->_size -= 1;
+                memmove(parent_sibling->_k_child_pair, parent_sibling->_k_child_pair + 1,
+                        parent_sibling->_size * sizeof(parent->_k_child_pair[0]));
+
+                // Set the moved child's parent
+                BP_TREE_BLOCK_T* child;
+                loadPointer(child, parent->_k_child_pair[parent->_size - 1].second);
+                child->_parent_block_id = parent_sibling->_block_id;
+
+                grandparent->_k_child_pair[pos_sep_grand].first = parent_sibling->_k_child_pair[0].first;
+            }
+            else{
+                memmove(parent->_k_child_pair + 1, parent->_k_child_pair,
+                        parent->_size * sizeof(parent->_k_child_pair[0]));
+                parent->_k_child_pair[0] = parent_sibling->_k_child_pair[parent_sibling->_size - 1];
+                parent_sibling->_size -= 1;
+                parent->_size += 1;
+
+                // Set the moved child's parent
+                BP_TREE_BLOCK_T* child;
+                loadPointer(child, parent->_k_child_pair[0].second);
+                child->_parent_block_id = parent->_block_id;
+
+                grandparent->_k_child_pair[pos_sep_grand].first = parent->_k_child_pair[0].first;
+            }
+            _bfm->unpinPage(parentSib_pageId);
+            return true;
+        }
+    }
+}
+
+KEY_VALUE_T_DECLARE
+bool BP_TREE_T::Delete(key_t key) {
+    pageId_t leaf_pageId;
+    BP_TREE_LEAF_T* leaf = FindNode(key, leaf_pageId); // The page should be already pinned
+    if (leaf == nullptr){ // Usually happens when tree is empty
+        throw DB_KEY_NOT_FOUND;
+    }
+
+    _bfm->modifyPage(leaf_pageId);
+
+    // Delete the key and value from leaf
+    db_size_t pos = leaf->leaf_biSearch(key);
+    if(leaf->_k_rowid_pair[pos].first != key){ // Delete must match
+        throw DB_KEY_NOT_FOUND;
+    }
+
+    // Remove the key and value
+    memmove(leaf->_k_rowid_pair + pos, leaf->_k_rowid_pair + pos + 1,
+            sizeof(leaf->_k_rowid_pair[0]) * (leaf->_size - (pos + 1)));
+    leaf->_size -= 1;
+
+    if (leaf->_block_id == _root_id) {
+        if (leaf->_size == 0){ // Empty tree
+            leaf->_blockType = INVALID_BLOCK;
+            _root_id = INVALID_BLOCK_ID;
+        }
+        return true;
+    }
+    // Violate capacity constraint for leaf and non-root node
+    else if (leaf->_size < (leaf->_max_size + 1) / 2){ // The upper bound of _max_size / 2
+        // Make sure of the safety.
+        assert(leaf->_size == (leaf->_max_size + 1) / 2 - 1);
+
+        BP_TREE_LEAF_T *sibling;
+        pageId_t sibling_pageId;
+        BP_TREE_INTERNAL_T *parent;
+        pageId_t parent_pageId;
+
+        loadPointer(parent, parent_pageId, leaf->_parent_block_id);
+        _bfm->pinPage(parent_pageId);
+        // We have to know whether to choose the sibling forward or backward.
+        // I choose the sibling backward, unless leaf is the tail child of its parent
+        key_t sep_key_in_parent;
+        bool is_predecessor;
+        db_size_t pos_sep = parent->internal_biSearch(leaf->_k_rowid_pair[0].first); ///< the separation position
+        assert(parent->_k_child_pair[pos_sep].second == leaf->_block_id);
+
+        if (pos_sep == parent->_size - 1){ // The tail child.
+            loadPointer(sibling, sibling_pageId, parent->_k_child_pair[pos_sep - 1].second);
+            sep_key_in_parent = parent->_k_child_pair[pos_sep].first;
+            // For safety and debug purpose.
+            assert(parent->_k_child_pair[pos_sep].first == leaf->_k_rowid_pair[0].first);
+            is_predecessor = false;
+        }
+        else{
+            pos_sep += 1;
+            loadPointer(sibling, sibling_pageId, parent->_k_child_pair[pos_sep].second);
+            sep_key_in_parent = parent->_k_child_pair[pos_sep].first;
+
+            assert(parent->_k_child_pair[pos_sep].first == sibling->_k_rowid_pair[0].first);
+            is_predecessor = true;
+        }
+        _bfm->pinPage(sibling_pageId);
+
+        // At most n - 1 keys in leaves.
+        if (sibling->_size + leaf->_size < sibling->_max_size){ // Merge leaf and sibling
+            _bfm->modifyPage(sibling_pageId);
+            _bfm->modifyPage(leaf_pageId);
+            _bfm->modifyPage(parent_pageId);
+            // Make sure leaf is the latter one
+            if (is_predecessor){
+                auto temp1 = leaf;
+                leaf = sibling;
+                sibling = temp1;
+            }
+
+            // Move the content in leaf to sibling
+            // 1. move the sibling pointer to the next node
+            sibling->_next_block_id = leaf->_next_block_id;
+            // 2. move the _k_rowid_pair
+            memcpy(sibling->_k_rowid_pair + sibling->_size, leaf->_k_rowid_pair,
+                   leaf->_size * sizeof(leaf->_k_rowid_pair[0]));
+            sibling->_size += leaf->_size;
+            leaf->_size = 0;
+
+            _bfm->unpinPage(sibling_pageId);
+            _bfm->unpinPage(leaf_pageId);
+
+            Delete_in_Parent(parent, pos_sep);
+            // Lazy delete here. Forget about leaf block_id.
+            leaf->_blockType = INVALID_BLOCK;
 //            delete leaf;
-//        }
-//        else{ // Redistribution between two leaves
-//            if (is_predecessor){ // leaf is the predecessor of sibling
-//                leaf->key_field.push_back(sibling->key_field.front());
-//                leaf->value_field.push_back(sibling->value_field.front());
-//
-//                sibling->key_field.erase(sibling->key_field.begin());
-//                sibling->value_field.erase(sibling->value_field.begin());
-//
-//                parent->key_field.at(i) = sibling->key_field.front(); // The separation key
-//            }
-//            else{ // leaf is the successor of sibling
-//                leaf->key_field.insert(leaf->key_field.begin(), sibling->key_field.back());
-//                leaf->value_field.insert(leaf->value_field.begin(), sibling->value_field.back());
-//
-//                sibling->key_field.pop_back();
-//                sibling->value_field.pop_back();
-//
-//                parent->key_field.at(i - 1) = leaf->key_field.front(); // The separation key
-//            }
-//        }
-//        return true;
-//    }
-//}
+        }
+        else{ // Redistribution between two leaves
+            if (is_predecessor){ // leaf is the predecessor of sibling
+                leaf->_k_rowid_pair[leaf->_size] = sibling->_k_rowid_pair[0];
+                leaf->_size += 1;
+                sibling->_size -= 1;
+                memmove(sibling->_k_rowid_pair, sibling->_k_rowid_pair + 1,
+                        sibling->_size * sizeof(sibling->_k_rowid_pair[0]));
+                // The separation key
+                parent->_k_child_pair[pos_sep].first = sibling->_k_rowid_pair[0].first;
+            }
+            else{ // leaf is the successor of sibling
+                memmove(leaf->_k_rowid_pair + 1, leaf->_k_rowid_pair,
+                        leaf->_size * sizeof(sibling->_k_rowid_pair[0]));
+                leaf->_k_rowid_pair[0] = sibling->_k_rowid_pair[sibling->_size - 1];
+                leaf->_size += 1;
+                sibling->_size -= 1;
+
+                parent->_k_child_pair[pos_sep].first = leaf->_k_rowid_pair[0].first;
+            }
+
+            _bfm->unpinPage(sibling_pageId);
+            _bfm->unpinPage(leaf_pageId);
+        }
+        // TODO : Check if it is necessary to optimize the pin and unpin
+        _bfm->unpinPage(parent_pageId);
+
+        return true;
+    }
+}
 //
 //KEY_VALUE_T_DECLARE
 //bool BP_TREE_T::FindValue(key_t key, value_t& result) {
 //    BP_NODE_T& node = *(FindNode(key));
-//    size_t id = node.FindPos_at_Node(key);
+//    db_size_t id = node.FindPos_at_Node(key);
 //    if (id != -1){
 //        result = node.value_field.at(id);
 //        return true;
@@ -585,20 +674,20 @@ bool BP_TREE_T::Insert(key_t key, value_t val){
 //    const BP_NODE_T* lower_node = FindNode(lower_key);
 //    const BP_NODE_T* upper_node = FindNode(upper_key);
 //
-//    size_t start_id = lower_node->FindPos_at_Node(lower_key);
-//    size_t end_id = upper_node->FindPos_at_Node(upper_key);
+//    db_size_t start_id = lower_node->FindPos_at_Node(lower_key);
+//    db_size_t end_id = upper_node->FindPos_at_Node(upper_key);
 //
 //    if (start_id == -1 || end_id == -1){
 //        return false;
 //    }
 //    else{
 //        if (lower_node == upper_node){
-//            for (size_t i = start_id; i <= end_id; ++i){
+//            for (db_size_t i = start_id; i <= end_id; ++i){
 //                result.push_back(lower_node->value_field.at(i));
 //            }
 //        }
 //        else{
-//            for (size_t i = start_id; i < lower_node->value_field.size(); ++i){
+//            for (db_size_t i = start_id; i < lower_node->value_field.size(); ++i){
 //                result.push_back(lower_node->value_field.at(i));
 //            }
 //            const BP_NODE_T* next = lower_node->ptr_field.front();
@@ -608,7 +697,7 @@ bool BP_TREE_T::Insert(key_t key, value_t val){
 //                }
 //                next = next->ptr_field.front();
 //            }
-//            for (size_t i = 0; i <= end_id; ++i) {
+//            for (db_size_t i = 0; i <= end_id; ++i) {
 //                result.push_back(upper_node->value_field.at(i));
 //            }
 //        }
