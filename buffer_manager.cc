@@ -24,7 +24,7 @@ Page::Page() {
 void Page::initialize() {
     file_name_ = "";
     block_id_ = -1;
-    pin_count_ = -1;
+    pin_count_ = 0;
     dirty_ = false;
     avaliable_ = true;
     timeb t;
@@ -205,10 +205,8 @@ int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block
     // 对新载入的页进行相应设置
     Frames[page_id].setFileName(file_name);
     Frames[page_id].setBlockId(block_id);
-    Frames[page_id].setPinCount(1);
+    Frames[page_id].setPinCount(0);
     Frames[page_id].setDirty(false);
-    //Frames[page_id].setRef(true);
-    //Frames[page_id].setTime();
     Frames[page_id].setAvaliable(false);
     return 0;
 }
@@ -279,6 +277,14 @@ pageId_t BufferManager::getEmptyPageId(){
         if (Frames[i].getAvaliable() == true)
             return i;
     }
+    int check = 0;
+    for (int i = 0;i < frame_size_;i++) {
+        if (Frames[i].getPinCount() == 0)
+            check = 1;
+            break;
+    }
+    if(check == 0) 
+        throw DB_ALL_PAGES_PINNED;
     while(1){
         timeb t;
         ftime(&t);
@@ -287,7 +293,6 @@ pageId_t BufferManager::getEmptyPageId(){
             if(Frames[i].getPinCount() == 0 && Frames[i].getTime() < now){
                 current_position_ = i;
                 now = Frames[i].getTime();
-                //std::cout << "@";
             }
         }
         if (Frames[current_position_].getDirty() == true) {
