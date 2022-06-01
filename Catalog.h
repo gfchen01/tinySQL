@@ -5,6 +5,8 @@
 
 class CatalogManager{
 public:
+
+    CatalogManager();
     /**
      * @brief Create a Table object
      * 
@@ -55,7 +57,7 @@ public:
      * @return true 
      * @return false 
      */
-    bool existAttribute(string table_name);
+    bool existAttribute(string table_name, string attr_name);
 
     /**
      * @brief Get the Attribute object
@@ -91,6 +93,7 @@ private:
     Index getIndex(string table_name);
     
     int getBlockSize(string table_name);
+
 };
 
 #endif
