@@ -17,15 +17,16 @@ enum struct S_ATTRIBUTE {Null,PrimaryKey,Unique};
 // use to store information
 // type int:-1 float:0 stirng:1-255
 struct Data{
-    int type;       
+    BASE_SQL_ValType type;       
     int int_data;
     float f_data;
-    string str_data;
+    std::string str_data;
 };
 
 //used to confirm the attribute, max32
 struct Attribute{
     int num;         // number of property
+    int type[32];       // -1:int, 0:float, 1~255 string
     string name[32];    // property name
     bool unique[32];    //  uniqure or not
     bool index[32];     // index exist or not
@@ -57,12 +58,7 @@ public:
     Table(string table_name,Attribute attr);
     Table(const Table &index);
 
-    int setIndex(int index,string index_name);  //插入索引，输入要建立索引的Attribute的编号，以及索引的名字，成功返回1失败返回0
-    int dropIndex(string index_name);  //删除索引，输入建立的索引的名字，成功返回1失败返回0
-
     void showTable(string table_name);
-    
-    
 };
 
 
