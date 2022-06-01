@@ -279,9 +279,11 @@ pageId_t BufferManager::getEmptyPageId(){
     }
     int check = 0;
     for (int i = 0;i < frame_size_;i++) {
-        if (Frames[i].getPinCount() == 0)
+        if (Frames[i].getPinCount() == 0){
             check = 1;
             break;
+        }
+         
     }
     if(check == 0) 
         throw DB_ALL_PAGES_PINNED;
