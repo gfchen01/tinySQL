@@ -18,6 +18,7 @@
 #include <string>
 #include <sys/timeb.h>
 #include "const.h"
+#include "err_type.h"
 
 /**
  * @brief Page类。磁盘文件中的每一块对应内存中的一个页（page)
@@ -35,6 +36,8 @@ class Page {
         int getPinCount();
         void setDirty(bool dirty);
         bool getDirty();
+        void setAvaliable(bool avaliable);
+        bool getAvaliable();
         void setTime();
         long long getTime();
         char* getBuffer();
@@ -44,6 +47,7 @@ class Page {
         int block_id_; /**< 页在所在文件中的块号(磁盘中通常叫块) */
         int pin_count_; /**< 记录被钉住的次数。被钉住的意思就是不可以被替换 */
         bool dirty_; /**< dirty记录页是否被修改 */
+        bool avaliable_; /**< avaliable标示页是否可以被使用(即将磁盘块load进该页) */
         long long last_access_time;
 };
 
