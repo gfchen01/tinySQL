@@ -12,8 +12,7 @@ Table::Table(string table_name,Attribute attr){
 
 bool CatalogManager::existTable(string table_name){
     BufferManager buffer_manager = BufferManager();
-    int pageID;
-    char* buffer = buffer_manager.getPage("All_TableNames", 0, pageID);
+    char* buffer = buffer_manager.getPage("All_TableNames", 0);
     string str_buffer = buffer;
     
     //獲取table_name in All_TableNames
@@ -33,10 +32,19 @@ bool CatalogManager::existTable(string table_name){
     }
     table[number] = str_buffer.substr(a+1,i-a-1);
     
-    
 }
 
 bool CatalogManager::existAttribute(string table_name, string attr_name){
+    BufferManager buffer_manager = BufferManager();
+    int pageID;
+    char* buffer = buffer_manager.getPage(table_name, 0);
+    string str_buffer = buffer;
+    Attribute attr = getAttribute(table_name);
+    for (int i = 0; i<attr.num; i++){
+        if(attr_name == attr.name[i])
+            return true;
+    }
+    
     return false;
 }
 

@@ -15,7 +15,7 @@ public:
      * @param index 索引
      * @param primary Primary Key的位置
      */
-    void CreateTable(std::string table_name, Attribute attr,Index index, int primary);
+    void CreateTable(std::string table_name, Attribute attr);
 
    /**
     * @brief Update Index

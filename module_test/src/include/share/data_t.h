@@ -95,6 +95,7 @@ struct Data{
 struct Where{
     Data data;
     Operator relation_operator;
+    std::string attr_name;
 };
 //used to confirm the attribute, max32
 /**
