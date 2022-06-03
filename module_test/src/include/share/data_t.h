@@ -4,6 +4,9 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <cstring>
+
+#include "share/err_type.h"
 
 enum struct Operator {
     GT,GE,LT,LE,EQ,NE
@@ -11,16 +14,22 @@ enum struct Operator {
 
 typedef unsigned SQL_ValType;
 
-enum struct BASE_SQL_ValType {INT,FLOAT,STRING}; ///< MiniSQL supported data types.
+enum struct BASE_SQL_ValType
+        {INT,
+         FLOAT,
+         STRING}; ///< MiniSQL supported data types.
 
-enum struct S_ATTRIBUTE {Null,PrimaryKey,Unique}; ///< Special attribute types.
+enum struct S_ATTRIBUTE
+        {Null,
+         PrimaryKey,
+         Unique}; ///< Special attribute types.
 
 ;
 
 /**
  * @brief Basic data element in a tuple.
  * 
- * types: int:-1 float:0 stirng:1-255
+ * types: int:-1 float:0 string:1-255
  */
 struct Data{
     BASE_SQL_ValType type;
@@ -29,6 +38,59 @@ struct Data{
         float f_data;
         char s_data[20];
     } data_meta;
+
+    friend bool operator<(const Data& d_l, const Data& d_r){
+        if (d_l.type != d_r.type) throw DB_OPERANDS_MISMATCH;
+
+        switch (d_l.type) {
+            case BASE_SQL_ValType::STRING:{
+                if(strcmp(d_l.data_meta.s_data, d_r.data_meta.s_data) < 0){
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            case BASE_SQL_ValType::INT:{
+                return d_l.data_meta.i_data < d_r.data_meta.i_data;
+            }
+            case BASE_SQL_ValType::FLOAT:{
+                return d_l.data_meta.f_data < d_r.data_meta.f_data;
+            }
+            default:{
+                throw DB_TYPE_ERR;
+            }
+        }
+    }
+
+    friend bool operator==(const Data& d_l, const Data& d_r){
+        if (d_l.type != d_r.type){
+            throw DB_OPERANDS_MISMATCH;
+        }
+        switch (d_l.type) {
+            case BASE_SQL_ValType::STRING:{
+                if(strcmp(d_l.data_meta.s_data, d_r.data_meta.s_data) == 0){
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            case BASE_SQL_ValType::INT:{
+                return d_l.data_meta.i_data == d_r.data_meta.i_data;
+            }
+            case BASE_SQL_ValType::FLOAT:{
+                return d_l.data_meta.f_data == d_r.data_meta.f_data;
+            }
+            default:{
+                throw DB_TYPE_ERR;
+            }
+        }
+    }
+
+    friend bool operator!=(const Data& d_l, const Data& d_r){
+        return !(d_l == d_r);
+    }
 };
 struct Where{
     Data data;
@@ -42,7 +104,7 @@ struct Where{
  */
 struct Attribute{
     int num;         ///< number of property
-    int type;
+    int type[32];
     std::string name[32];    ///< property name
     bool unique[32];    ///<  uniqure or not
     bool index[32];     ///< index exist or not

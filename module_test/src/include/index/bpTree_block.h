@@ -83,7 +83,7 @@ struct bpTree_Leaf : public bpTree_Block{
      * @param key The given key
      * @return
      */
-    db_size_t leaf_biSearch(key_t key){
+    db_size_t leaf_biSearch(const key_t key){
         int left = 0; // Every pair is used.
         if (_size == 0)
             return 0;
@@ -129,7 +129,7 @@ public:
      * @param key The given key
      * @return
      */
-    db_size_t internal_biSearch(key_t key){
+    db_size_t internal_biSearch(const key_t key){
         db_size_t left = 1; // The first _k_child_pair doesn't contain a valid key.
         db_size_t right = _size - 1;
         db_size_t mid;

@@ -4,10 +4,12 @@
 #include <vector>
 #include <iostream>
 #include <cassert>
-#include "bpTree_block.h"
+#include <cstring>
+
+#include "index/bpTree_block.h"
 #include "buffer/buffer_manager.h"
 #include "share/err_type.h"
-#include <cstring>
+
 
 #define BP_TREE_T Bp_tree<key_t, value_t>
 #define BP_TREE_BLOCK_T bpTree_Block
@@ -18,14 +20,20 @@
 
 KEY_VALUE_T_DECLARE
 class Bp_tree{
+//    friend class IndexManager;
 public:
     Bp_tree(BufferManager* buf_manager):_bfm(buf_manager){};
 
     /**
+     * Init 1.indexName of the bpTree 2.root block id 3.total block count.
      * Must be called before every use !
      * @param indexFileName
      */
     void InitRoot(std::string indexFileName);
+
+    const std::string& getName() const {
+        return _index_fname;
+    }
 
     /**
      * @brief Basic insertion to the tree.
@@ -35,19 +43,26 @@ public:
      * @return true Insertion success
      * @return false Insertion fail
      */
-    bool Insert(key_t key, value_t val);
+    bool Insert(const key_t &key, const value_t &val);
 
     /**
      * @brief Basic deletion from the tree.
      *
-     * Note that normally it is not used by users.
      * Users should call more general functions, like update val, etc.
      *
      * @param key The key for a certain record.
      * @return true Deletion success.
      * @return false Insertion success.
      */
-    bool Delete(key_t key);
+    bool Delete(const key_t &key);
+
+    /**
+     *
+     * @param key
+     * @param deleted [out] The deleted value.
+     * @return
+     */
+    bool Delete(const key_t &key, value_t &deleted);
 
     /**
      * @brief Find the values by key (normally, we may say "pointers" for "values")
@@ -57,31 +72,39 @@ public:
      * @return true Search success
      * @return false
      */
-    bool FindValue(key_t key, value_t& result);
+    bool FindValue(const key_t &key, value_t &result) const;
 
     /**
      * @brief Find the value(pointer) based on the given lower and upper key
      *
-     * @param lower_key
-     * @param upper_key
+     * @param lower_key [in]
+     * @param upper_key [in]
      * @param result [out]
      * @return true Search success
      * @return false Search failure
      */
-    bool FindRange(key_t lower_key, key_t upper_key, std::vector<value_t>& result);
+    bool FindRange(const key_t& lower_key, const key_t& upper_key, std::vector<value_t>& result) const;
 
-    /**
+    /** @brief Update a certain key.
      *
      * @param former_key
      * @param new_key
      * @return
      */
-    bool UpdateIndex(key_t former_key, key_t new_key);
+    bool UpdateKey(const key_t &former_key, const key_t &new_key);
+
+    /**
+     * @brief Update a certain value
+     * @param key
+     * @param new_val
+     * @return
+     */
+    bool UpdateValue(const key_t &key, const value_t &new_val);
 
 private:
     blockId_t _root_id = INVALID_BLOCK_ID;
-    std::string _index_fname;
-    db_size_t _file_block_count;
+    std::string _index_fname; ///< The full name of the index file name.
+    db_size_t _file_block_count; ///< The block number of the index file.
 //    BP_TREE_BLOCK_T* header_ptr;
 //    pageId_t header_pageId; ///< The header page id in the buffer pool. The page is pinned.
 
@@ -92,11 +115,12 @@ private:
     /**
      * @brief Find the pointer leaf node where the key-value stays.
      * NOTE: return the pointer because the corresponding block will be loaded in the disk.
+     * And the block will be pinned. So remember to unpin the page.
      *
      * @param key Search key
      * @return BP_TREE_LEAF_T* Result
      */
-    BP_TREE_LEAF_T* FindNode(key_t key, pageId_t& leaf_pageId);
+    BP_TREE_LEAF_T* FindNode(const key_t &key, pageId_t &leaf_pageId) const;
 
     /**
      * @brief Simply insert in a leaf node.
@@ -107,7 +131,7 @@ private:
      * @return true insertion success
      * @return false insertion failure
      */
-    bool Insert_in_Leaf(key_t key, value_t val, BP_TREE_LEAF_T* leaf);
+    bool Insert_in_Leaf(const key_t &key, const value_t &val, BP_TREE_LEAF_T* leaf);
 
     /**
      * @brief Insert in a parent. May split. Recursive call.
@@ -117,7 +141,7 @@ private:
      * @param split[in] right split node. The new node.
      * @return true for success
      */
-    bool Insert_in_Parent(key_t key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_BLOCK_T* split);
+    bool Insert_in_Parent(const key_t &key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_BLOCK_T* split);
 
     /**
      * @brief Delete in the parent based on child pointer.
@@ -129,23 +153,23 @@ private:
      */
     bool Delete_in_Parent(BP_TREE_BLOCK_T* parent, db_size_t pos_sep);
 
-    void loadPointer(BP_TREE_LEAF_T*& leaf, pageId_t& leaf_pageId, blockId_t b_id){
-        char* raw = _bfm->getPage(PATH::INDEX_PATH + _index_fname, b_id, leaf_pageId);
+    void loadPointer(BP_TREE_LEAF_T*& leaf, pageId_t& leaf_pageId, blockId_t b_id) const{
+        char* raw = _bfm->getPage(_index_fname, b_id, leaf_pageId);
         leaf = reinterpret_cast<BP_TREE_LEAF_T*>(raw);
     }
 
-    void loadPointer(BP_TREE_INTERNAL_T*& internal, pageId_t& internal_pageId, blockId_t b_id){
-        char* raw = _bfm->getPage(PATH::INDEX_PATH + _index_fname, b_id, internal_pageId);
+    void loadPointer(BP_TREE_INTERNAL_T*& internal, pageId_t& internal_pageId, blockId_t b_id) const{
+        char* raw = _bfm->getPage(_index_fname, b_id, internal_pageId);
         internal = reinterpret_cast<BP_TREE_INTERNAL_T*>(raw);
     }
 
-    void loadPointer(BP_TREE_BLOCK_T*& block, blockId_t b_id){
-        char* raw = _bfm->getPage(PATH::INDEX_PATH + _index_fname, b_id);
+    void loadPointer(BP_TREE_BLOCK_T*& block, blockId_t b_id) const{
+        char* raw = _bfm->getPage(_index_fname, b_id);
         block = reinterpret_cast<BP_TREE_BLOCK_T*>(raw);
     }
 
-    void loadPointer(BP_TREE_BLOCK_T*& block, pageId_t& pageId, blockId_t b_id){
-        char* raw = _bfm->getPage(PATH::INDEX_PATH + _index_fname, b_id, pageId);
+    void loadPointer(BP_TREE_BLOCK_T*& block, pageId_t& pageId, blockId_t b_id) const {
+        char* raw = _bfm->getPage(_index_fname, b_id, pageId);
         block = reinterpret_cast<BP_TREE_BLOCK_T*>(raw);
     }
 
@@ -156,6 +180,8 @@ private:
             child->_parent_block_id = internal->_block_id;
         }
     }
+
+    std::pair<key_t, value_t>& getKeyRowidPair(const key_t &key);
 };
 
 KEY_VALUE_T_DECLARE
@@ -164,7 +190,7 @@ void BP_TREE_T::InitRoot(std::string indexFileName) {
 
     pageId_t headPageId;
     BP_TREE_BLOCK_T* headBlock;
-    loadPointer(headBlock, headPageId, 0);
+    loadPointer(headBlock, headPageId, 0); // May throw here
     _bfm->pinPage(headPageId);
 
     // Set _root_id to avoid expensive operations later;
@@ -176,7 +202,7 @@ void BP_TREE_T::InitRoot(std::string indexFileName) {
         _root_id = FindRootBlockId(headBlock);
     }
     // Upper bound of the integer: fileSize / PAGESIZE
-    _file_block_count = (_bfm->getFileSize(PATH::INDEX_PATH + indexFileName) + PAGESIZE - 1) / PAGESIZE;
+    _file_block_count = (_bfm->getFileSize(indexFileName) + PAGESIZE - 1) / PAGESIZE;
     _bfm->unpinPage(headPageId);
 }
 
@@ -192,7 +218,7 @@ blockId_t BP_TREE_T::FindRootBlockId(bpTree_Block *block) {
 }
 
 KEY_VALUE_T_DECLARE
-bool BP_TREE_T::FindValue(key_t key, value_t &result) {
+bool BP_TREE_T::FindValue(const key_t &key, value_t &result) const {
     pageId_t p_Id;
     BP_TREE_LEAF_T* n = FindNode(key, p_Id);
 
@@ -201,13 +227,66 @@ bool BP_TREE_T::FindValue(key_t key, value_t &result) {
     db_size_t pos = n->leaf_biSearch(key);
     result = n->_k_rowid_pair[pos].second;
     if (n->_k_rowid_pair[pos].first == key){
+        _bfm->unpinPage(p_Id);
         return true;
     }
-    else return false;
+    else {
+        _bfm->unpinPage(p_Id);
+        return false;
+    }
 }
 
 KEY_VALUE_T_DECLARE
-BP_TREE_LEAF_T* BP_TREE_T::FindNode(key_t key, pageId_t& leaf_pageId){
+bool BP_TREE_T::FindRange(const key_t &lower_key, const key_t &upper_key, std::vector<value_t> &result) const {
+    assert(lower_key < upper_key);
+
+    pageId_t lkey_pId;
+    BP_TREE_LEAF_T* lkey_leaf = FindNode(lower_key, lkey_pId);
+
+    pageId_t rkey_pId;
+    BP_TREE_LEAF_T* rkey_leaf = FindNode(upper_key, rkey_pId);
+
+    if (rkey_leaf == nullptr || lkey_leaf == nullptr) throw DB_FAILED;
+
+    db_size_t l_pos = lkey_leaf->leaf_biSearch(lower_key);
+    if (lkey_leaf->_k_rowid_pair[l_pos].first != lower_key) return false;
+    db_size_t r_pos = rkey_leaf->leaf_biSearch(upper_key);
+    if (rkey_leaf->_k_rowid_pair[r_pos].first != upper_key) return false;
+
+    if (lkey_leaf->_block_id == rkey_leaf->_block_id){
+        for (db_size_t pos = l_pos; pos <= r_pos; ++pos){
+            result.push_back(lkey_leaf->_k_rowid_pair[pos].second);
+        }
+    }
+    else{
+        for (db_size_t pos = l_pos; pos < lkey_leaf->_size; ++pos){
+            result.push_back(lkey_leaf->_k_rowid_pair[pos].second);
+        }
+        BP_TREE_LEAF_T* next_node;
+        pageId_t next_pId;
+        while(lkey_leaf->_next_block_id != rkey_leaf->_block_id){
+            loadPointer(next_node, next_pId, lkey_leaf->_next_block_id);
+            _bfm->unpinPage(lkey_pId);
+            lkey_leaf = next_node;
+            lkey_pId = next_pId;
+
+            for (db_size_t pos = 0; pos < lkey_leaf->_size; ++pos){
+                result.push_back(lkey_leaf->_k_rowid_pair[pos].second);
+            }
+        }
+
+        _bfm->unpinPage(lkey_pId);
+
+        for (db_size_t pos = 0; pos <= r_pos; ++pos){
+            result.push_back(lkey_leaf->_k_rowid_pair[pos].second);
+        }
+        _bfm->unpinPage(rkey_pId);
+    }
+    return true;
+}
+
+KEY_VALUE_T_DECLARE
+BP_TREE_LEAF_T* BP_TREE_T::FindNode(const key_t &key, pageId_t& leaf_pageId) const{
     pageId_t temp_pageId;
     BP_TREE_BLOCK_T* root;
     if (_root_id == INVALID_BLOCK_ID){
@@ -240,7 +319,7 @@ BP_TREE_LEAF_T* BP_TREE_T::FindNode(key_t key, pageId_t& leaf_pageId){
 }
 
 KEY_VALUE_T_DECLARE
-bool BP_TREE_T::Insert_in_Parent(key_t key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_BLOCK_T* split){
+bool BP_TREE_T::Insert_in_Parent(const key_t &key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_BLOCK_T* split){
     if (prev_leaf->_block_id == _root_id){
         pageId_t newRoot_pageId;
         BP_TREE_INTERNAL_T* newRoot;
@@ -326,7 +405,7 @@ bool BP_TREE_T::Insert_in_Parent(key_t key, BP_TREE_BLOCK_T* prev_leaf, BP_TREE_
 }
 
 KEY_VALUE_T_DECLARE
-bool BP_TREE_T::Insert_in_Leaf(key_t key, value_t val, BP_TREE_LEAF_T* leaf){
+bool BP_TREE_T::Insert_in_Leaf(const key_t &key, const value_t &val, BP_TREE_LEAF_T* leaf){
     assert(leaf->isLeaf());
 //    assert(leaf->_size < leaf->_max_size);
 
@@ -345,7 +424,7 @@ bool BP_TREE_T::Insert_in_Leaf(key_t key, value_t val, BP_TREE_LEAF_T* leaf){
 }
 
 KEY_VALUE_T_DECLARE
-bool BP_TREE_T::Insert(key_t key, value_t val){
+bool BP_TREE_T::Insert(const key_t &key, const value_t &val){
     if (_root_id == INVALID_BLOCK_ID){ // Create a new root at block 0 of B+ tree file.
         _root_id = 0;
         pageId_t root_pageId;
@@ -536,7 +615,7 @@ bool BP_TREE_T::Delete_in_Parent(BP_TREE_BLOCK_T* _parent, db_size_t pos_sep){
 }
 
 KEY_VALUE_T_DECLARE
-bool BP_TREE_T::Delete(key_t key) {
+bool BP_TREE_T::Delete(const key_t &key) {
     pageId_t leaf_pageId;
     BP_TREE_LEAF_T* leaf = FindNode(key, leaf_pageId); // The page should be already pinned
     if (leaf == nullptr){ // Usually happens when tree is empty
@@ -657,18 +736,42 @@ bool BP_TREE_T::Delete(key_t key) {
         return true;
     }
 }
-//
+
 //KEY_VALUE_T_DECLARE
-//bool BP_TREE_T::FindValue(key_t key, value_t& result) {
-//    BP_NODE_T& node = *(FindNode(key));
-//    db_size_t id = node.FindPos_at_Node(key);
-//    if (id != -1){
-//        result = node.value_field.at(id);
-//        return true;
-//    }
-//    else return false;
-//}
+//std::pair<key_t, value_t>& BP_TREE_T::getKeyRowidPair(const key_t &key) {
 //
+//    FindNode(key, )
+//}
+
+KEY_VALUE_T_DECLARE
+bool BP_TREE_T::UpdateKey(const key_t &former_key, const key_t &new_key) {
+    pageId_t key_pageId;
+    BP_TREE_LEAF_T* n = FindNode(former_key, key_pageId);
+    db_size_t pos = n->leaf_biSearch(former_key);
+    if (n->_k_rowid_pair[pos].first != former_key) throw DB_KEY_NOT_FOUND;
+    value_t val = n->_k_rowid_pair[pos].second;
+    _bfm->unpinPage(key_pageId);
+
+    bool success_flg;
+    // TODO : Make it more efficient. Redundant search
+    success_flg = Delete(former_key);
+    if (success_flg){
+        success_flg = Insert(new_key, val);
+    }
+    return success_flg;
+}
+
+KEY_VALUE_T_DECLARE
+bool BP_TREE_T::UpdateValue(const key_t &key, const value_t &new_val) {
+    pageId_t key_pageId;
+    BP_TREE_LEAF_T* n = FindNode(key, key_pageId);
+    db_size_t pos = n->leaf_biSearch(key);
+    if (n->_k_rowid_pair[pos].first != key) throw DB_KEY_NOT_FOUND;
+    n->_k_rowid_pair[pos].second = new_val;
+    _bfm->unpinPage(key_pageId);
+    return true;
+}
+
 //KEY_VALUE_T_DECLARE
 //bool BP_TREE_T::FindRange(key_t lower_key, key_t upper_key, std::vector<value_t>& result) {
 //    const BP_NODE_T* lower_node = FindNode(lower_key);

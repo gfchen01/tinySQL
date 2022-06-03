@@ -2,9 +2,11 @@
 #define CATALOG_H
 
 #include "share/data_t.h"
-
+#include <string>
 class CatalogManager{
 public:
+
+    CatalogManager();
     /**
      * @brief Create a Table object
      * 
@@ -13,7 +15,7 @@ public:
      * @param index 索引
      * @param primary Primary Key的位置
      */
-    void CreateTable(std::string table_name, Attribute attr, Index index, int primary);
+    void CreateTable(std::string table_name, Attribute attr,Index index, int primary);
 
    /**
     * @brief Update Index
@@ -22,7 +24,7 @@ public:
     * @param attr_name  通过attr_name來找對應的attribute
     * @param index_name  通过index_name來防止命名重複
     */
-    void UpdateIndex(std::string table_name, std::string attr_name, std::string index_name);
+    void UpdateIndex(std::string table_name,std::string attr_name,std::string index_name);
 
     /**
      * @brief 
@@ -37,7 +39,7 @@ public:
      * @param table_name 通过table_name查找該表
      * @param index_name 通过index_name來刪除index
      */
-    void DropIndex(std::string table_name, std::string index_name);
+    void DropIndex(std::string table_name,std::string index_name);
 
     /**
      * @brief 
@@ -55,7 +57,7 @@ public:
      * @return true 
      * @return false 
      */
-    bool existAttribute(std::string table_name);
+    bool existAttribute(std::string table_name, std::string attr_name);
 
     /**
      * @brief Get the Attribute object
@@ -91,6 +93,7 @@ private:
     Index getIndex(std::string table_name);
     
     int getBlockSize(std::string table_name);
+
 };
 
 #endif
