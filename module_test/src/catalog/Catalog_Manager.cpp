@@ -60,7 +60,17 @@ std::string CatalogManager::getTableName(std::string table_name, int start){
     return table_name;
 }
 
-void CatalogManager::CreateTable(std::string table_name, Attribute attr, Index index, int primary){
+void CatalogManager::CreateTable(std::string table_name, Attribute attr){
+    Index index;
+    if(attr.primary_Key>=0){
+        index.number = 1;
+        index.index_name[0] = table_name + "_" + attr.name[attr.primary_Key];
+        index.location[0] = attr.primary_Key; 
+    }
+    else {
+        index.number = 0;
+    }
+    
     if(existTable(table_name) == true){
         std::cout<<"Error the table has already exist!!!"<<std::endl;
         throw;
@@ -69,8 +79,6 @@ void CatalogManager::CreateTable(std::string table_name, Attribute attr, Index i
         attr.unique[i] = false;    
     }
 
-    attr.unique[primary] = true;
-    attr.primary_Key = primary;
     std::string str="";
     Table table = Table(table_name,attr);
     std::string filename = table_name;
@@ -201,7 +209,7 @@ void CatalogManager::UpdateIndex(std::string table_name, std::string attr_name, 
     }
     index_record.number++;
     DropTable(table_name);
-    CreateTable(table_name,attr,index_record,attr.primary_Key);
+    CreateTable(table_name,attr);
    
    /*
     // 用參數table_name 和buffer_Manager要 相應的block (getPage)
@@ -238,7 +246,7 @@ void CatalogManager::DropIndex(std::string table_name, std::string index_name){
     index_record.location[number] = index_record.location[theLast];
 
     DropTable(table_name);
-    CreateTable(table_name, attr, index_record, attr.primary_Key);
+    CreateTable(table_name, attr);
 }
 
 Index CatalogManager::getIndex(std::string table_name){
