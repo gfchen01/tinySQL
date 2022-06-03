@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "share/err_type.h"
+#include "hsql/SQLParser.h"
 
 enum struct Operator {
     GT,GE,LT,LE,EQ,NE
@@ -38,6 +39,31 @@ struct Data{
         float f_data;
         char s_data[20];
     } data_meta;
+
+    Data(){}
+
+    Data(hsql::Expr* expr){
+        switch (expr->type) {
+            case hsql::kExprLiteralInt :{
+                type = BASE_SQL_ValType::INT;
+                data_meta.i_data = expr->ival;
+                break;
+            }
+            case hsql::kExprLiteralFloat :{
+                type = BASE_SQL_ValType::FLOAT;
+                data_meta.f_data = expr->fval;
+                break;
+            }
+            case hsql::kExprLiteralString :{
+                type = BASE_SQL_ValType::STRING;
+                strcpy(data_meta.s_data, expr->getName());
+                break;
+            }
+            default:{
+                throw DB_FAILED;
+            }
+        }
+    }
 
     friend bool operator<(const Data& d_l, const Data& d_r){
         if (d_l.type != d_r.type) throw DB_OPERANDS_MISMATCH;
@@ -92,6 +118,7 @@ struct Data{
         return !(d_l == d_r);
     }
 };
+
 struct Where{
     Data data;
     Operator relation_operator;
@@ -105,10 +132,10 @@ struct Where{
  */
 struct Attribute{
     int num;         ///< number of property
-    int type[32];
+    BASE_SQL_ValType type[32];
     std::string name[32];    ///< property name
-    bool unique[32];    ///<  uniqure or not
-    bool index[32];     ///< index exist or not
+    bool unique[32] = {false};    ///<  uniqure or not
+    bool index[32] = {false};     ///< index exist or not
     int primary_Key;    ///< -1 not exist, 1-32 exist and the place where the primary key are
 };
 
