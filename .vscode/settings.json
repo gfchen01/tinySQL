@@ -28,6 +28,9 @@
         "cstdio": "cpp",
         "cstdlib": "cpp",
         "cwchar": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "xstring": "cpp",
+        "random": "cpp",
+        "iostream": "cpp"
     }
 }
