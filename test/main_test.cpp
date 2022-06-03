@@ -1,12 +1,12 @@
 #include <iostream>
 #include <random>
 #include <vector>
-#include "index/bpTree_block.h"
-#include "index/bpTree_disk.h"
-
 #include <chrono>
 #include <random>
 #include <set>
+
+#include "index/Index.h"
+#include "buffer/buffer_manager.h"
 
 using namespace std;
 
@@ -24,67 +24,42 @@ void createBptreeFile(std::string fileName, BufferManager& bfm){
     bfm.flushPage(header_id, fileName, 0);
 }
 
-int main() 
+int main()
 {
     BufferManager bfm;
     string fileName = "testBptreeFile";
-    createBptreeFile(fileName, bfm);
+//    createBptreeFile(fileName, bfm);
+    IndexManager id_m(&bfm);
+    Attribute a;
+    a.name = "name";
 
-    Bp_tree<int, int> bpTree(&bfm);
-    bpTree.InitRoot(fileName);
-
-    size_t len = 1e4;
-//    bpTree.Insert(-1, -1);
-//    bpTree.Delete(-1);
-
-    int value;
     try{
-        bpTree.FindValue(10000, value);
+        id_m.CreateIndex("School");
     }
-    catch (db_err_t& err){
-        cout << err << endl;
+    catch (db_err_t& db_err){
+        cout << db_err;
     }
+    Data data1;
+    data1.type = BASE_SQL_ValType::INT;
+    data1.data_meta.i_data = 3;
 
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    std::default_random_engine generator (seed);
-    std::uniform_int_distribution<int> distribution(0,len);
+    Data data2;
+    data2.type = BASE_SQL_ValType::INT;
+    data2.data_meta.i_data = 90;
 
-    set<int> randKeys;
+    Index_t row_id = 582851;
+    Index_t res;
 
-    for (size_t i = 0; i < len; ++i){
-        int rand_key = distribution(generator);
-        if (randKeys.find(rand_key) != randKeys.end()){
-            continue;
-        }
-//        cout << rand_key << endl;
-        randKeys.insert(rand_key);
-        bpTree.Insert(rand_key, rand_key);
-    }
+    id_m.InsertId("School", data1, row_id);
+    id_m.FindId("School", data1, res);
+    cout << res << endl;
+    id_m.UpdateKey("School", data1, data2);
+    cout << id_m.FindId("School", data1, res) <<endl;
+    cout << id_m.FindId("School", data2, res) <<endl;
+    cout << res;
+    id_m.DeleteId("School", data2);
+    id_m.DropIndex("School");
+//    Bp_tree<int, int> bpTree(&bfm);
+//    bpTree.InitRoot(fileName);
 
-    for (auto item : randKeys){
-        cout << item << endl;
-    }
-
-    int i = 0;
-    for (auto item : randKeys){
-        int res;
-        if(!bpTree.FindValue(item, res)){
-            cout << "Error, debug" << endl;
-        }
-        try{
-            bpTree.Delete(item);
-        }
-        catch (db_err_t& err){
-            cout << err;
-        }
-        if (bpTree.FindValue(item, res)){
-            cout << "Error, debug2" << endl;
-            bpTree.Delete(item);
-        }
-        ++i;
-    }
-
-    std::cout << "HAHAHA" << std::endl;
-    // cout << sizeof(x1) << "," << sizeof(x2) << ", " << sizeof(x3) << endl;
-    // cout << sizeof(blockId_t);
 }
