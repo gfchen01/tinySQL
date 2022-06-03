@@ -10,10 +10,6 @@ Table::Table(string table_name,Attribute attr){
     this->index.number = 0;
 }
 
-int CatalogManager::getBlockSize(string table_name){
-    
-}
-
 bool CatalogManager::existTable(string table_name){
     BufferManager buffer_manager = BufferManager();
     char* buffer = buffer_manager.getPage("All_TableNames", 0);
@@ -80,7 +76,7 @@ void CatalogManager::CreateTable(string table_name, Attribute attr, Index index,
     str = str + "#" + to_string(attr.primary_Key);
     str = str + "#" + to_string(index.number);
     for (int i=0; i<index.number; i++){
-        str = str + " " + index.index_name[i] +" "+ to_string(index.localation[i]);    
+        str = str + " " + index.index_name[i] +" "+ to_string(index.location[i]);    
     }
     str = str + "\n";
 
@@ -106,7 +102,7 @@ void CatalogManager::CreateTable(string table_name, Attribute attr, Index index,
     char* tmp_tb = (char*)table_info.data();
     all_buff  = strcat((char*)str_buffer.data(),tmp_tb);
     
-    //buffer save buffer_manager.modifyPage(filename);
+    //buffer_manager.modifyPage(filename);
 
 
 }
@@ -277,7 +273,7 @@ Index CatalogManager::getIndex(string table_name){
             }
             current++;
         }
-        index_record.localation[i] = atoi(table_info.substr(0, current).c_str());
+        index_record.location[i] = atoi(table_info.substr(0, current).c_str());
         table_info = table_info.substr(current+1);
     }
     return index_record;
@@ -285,5 +281,121 @@ Index CatalogManager::getIndex(string table_name){
 }
 
 Attribute CatalogManager::getAttribute(string table_name){
+    if(existTable(table_name) == false){
+        throw;
+    }
+    BufferManager buffer_manager = BufferManager();
+    char* buffer = buffer_manager.getPage(table_name,0);
+    Attribute attr_record;
+    string attr_info = buffer;
+    int current = 0;
+    while(attr_info[current] != '%'){
+        current++;
+    }
+    string str = attr_info.substr(0, current);
+    attr_info = attr_info.substr(current+1);
+    attr_record.num = atoi(str.c_str());
+    for(int i = 0; i<attr_record.num; i++){
+        for(int j = 0; j<2; j++){
+            current = 0 ;
+            while(attr_info[current] != ' '){
+                current++;
+            }
+            if(j == 0)
+                attr_record.type[i] = atoi(attr_info.substr(0,current).c_str());
+            else
+                attr_record.name[i] = attr_info.substr(0,current);
+            attr_info = attr_info.substr(current+1);
+        }
+        current = 0;
+        while(attr_info[current]!=' '){
+            if(attr_info[current]=='#'){
+                break;
+            }
+            current++;
+        }
+        if(attr_info.substr(0,current) == "1")
+            attr_record.unique[i] = true;
+        else   
+            attr_record.unique[i] = false;
+        
+        attr_info = attr_info.substr(current+1);
+    }
+    
+    // primary key info
+    current = 0;
+    while(attr_info[current]!='#'){
+        current++;
+    }
+    attr_record.primary_Key = atoi(attr_info.substr(0,current).c_str());
+    attr_info = attr_info.substr(current+1);
+
+    // index info
+    Index index_record = getIndex(table_name);
+    for(int i=0;i<32;i++)
+        attr_record.index[i]=false;
+    for(int i=0; i<index_record.number; i++)
+        attr_record.index[index_record.location[i]]=true;
+
+
+    return attr_record;
+    
+}
+
+string CatalogManager::Index2Attr(string table_name, string attr_name, string index_name){
+    if(existTable(table_name) == false){
+        throw;
+    }
+    Index index_record = getIndex(table_name);
+    int found = -1;
+    for (int i = 0; i<index_record.number; i++){
+        if(index_record.index_name[i] == index_name){
+            found = i;
+            break;
+        }
+    }
+    if(found == -1){
+        throw;
+    }
+    Attribute attr_record = getAttribute(table_name);
+    return attr_record.name[index_record.location[found]];
+
+}
+
+void CatalogManager::ShowTable(string table_name){
+    if(existTable(table_name) == false){
+        throw;
+    }
+    cout<<"Table name:"<<table_name<<std::endl;
+    Attribute attr_record=getAttribute(table_name);
+    Index index_record=getIndex(table_name);
+
+    string attr_type;
+    cout<<"Attribute number:"<<attr_record.num<<endl;
+    for(int i = 0; i<attr_record.num; i++){
+        switch (attr_record.type[i]){
+            case -1:
+                attr_type = "int";
+                break; 
+            case 0:
+                attr_type = "float";
+                break;
+            default:
+                attr_type = "string";
+                break;
+
+        }
+        cout<<"Attr_type"<<attr_type<<endl;
+        cout<<"Attr_name:"<<attr_record.name[i]<<endl;
+        cout<<"Attr_unique"<<attr_record.unique[i]<<endl;
+        if(i == attr_record.primary_Key){
+            std::cout<<"Primary Key"<<std::endl;
+        }
+    }
+    cout<<"Index number:"<<index_record.number<<endl;
+    for (int i = 0; i<index_record.number; i++){
+        std::cout<<"Index name:"<<index_record.index_name[i]<<std::endl;
+        std::cout<<"Index location"<<index_record.location[i]<<std::endl;
+    }
     
 }
