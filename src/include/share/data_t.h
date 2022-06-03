@@ -36,7 +36,6 @@ struct Data{
  */
 struct Attribute{
     int num;         ///< number of property
-    int type;
     std::string name[32];    ///< property name
     bool unique[32];    ///<  uniqure or not
     bool index[32];     ///< index exist or not

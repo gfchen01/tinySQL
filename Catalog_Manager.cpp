@@ -12,7 +12,8 @@ Table::Table(string table_name,Attribute attr){
 
 bool CatalogManager::existTable(string table_name){
     BufferManager buffer_manager = BufferManager();
-    char* buffer = buffer_manager.getPage("All_TableNames", 0);
+    int pageID;
+    char* buffer = buffer_manager.getPage("All_TableNames", 0, pageID);
     string str_buffer = buffer;
     
     //獲取table_name in All_TableNames
@@ -59,6 +60,7 @@ void CatalogManager::CreateTable(string table_name, Attribute attr, Index index,
     for (int i=0;i<attr.num;i++){
         attr.unique[i] = false;    
     }
+
     attr.unique[primary] = true;
     attr.primary_Key = primary;
     string str="";
@@ -174,7 +176,7 @@ void CatalogManager::UpdateIndex(string table_name, string attr_name, string ind
         throw;
     }
     for(int i=0; i<index_record.number; i++){
-        if(attr.name[index_record.localation[i]] == attr_name){
+        if(attr.name[index_record.location[i]] == attr_name){
             throw;
         }
         if(index_record.index_name[i] == index_name){
@@ -186,7 +188,7 @@ void CatalogManager::UpdateIndex(string table_name, string attr_name, string ind
     for (int i = 0; i<attr.num; i++){
         if(attr_name == attr.name[i]){
             //新的index在attribute的那个位置
-            index_record.localation[index_record.number] = i;
+            index_record.location[index_record.number] = i;
         }
     }
     index_record.number++;
@@ -225,7 +227,7 @@ void CatalogManager::DropIndex(string table_name, string index_name){
     index_record.number = index_record.number - 1;
     int theLast = index_record.number;
     index_record.index_name[number] = index_record.index_name[theLast];
-    index_record.localation[number] = index_record.localation[theLast];
+    index_record.location[number] = index_record.location[theLast];
 
     DropTable(table_name);
     CreateTable(table_name, attr, index_record, attr.primary_Key);
