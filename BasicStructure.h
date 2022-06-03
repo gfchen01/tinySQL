@@ -36,7 +36,7 @@ struct Attribute{
 // Index Manager, at most 10
 struct Index{
     int number;             //number of index
-    int localation[10];     // where it is in Attribute
+    int location[10];     // where it is in Attribute
     string index_name[10];  // index name
 };
 

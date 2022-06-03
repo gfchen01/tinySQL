@@ -30,6 +30,7 @@
         "cwchar": "cpp",
         "vector": "cpp",
         "xstring": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "iostream": "cpp"
     }
 }

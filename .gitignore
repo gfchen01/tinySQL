@@ -1,9 +1,9 @@
 ### DB Storage Folder
-./DB_DATAFILES/*
+DB_DATAFILES
 
 ### Editors
-.vscode/*
-.idea/*
+.vscode
+.idea
 
 #build
 build
