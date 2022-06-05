@@ -3,8 +3,11 @@
 
 #include "share/data_t.h"
 #include <string>
+#include "buffer/buffer_manager.h"
+
 class CatalogManager{
 public:
+    CatalogManager(BufferManager *bfm);
 
     CatalogManager();
     /**
@@ -17,13 +20,13 @@ public:
      */
     void CreateTable(std::string table_name, Attribute attr);
 
-   /**
-    * @brief Update Index
-    * 
-    * @param table_name 通过table_name來找對應的table
-    * @param attr_name  通过attr_name來找對應的attribute
-    * @param index_name  通过index_name來防止命名重複
-    */
+    /**
+     * @brief Update Index
+     *
+     * @param table_name 通过table_name來找對應的table
+     * @param attr_name  通过attr_name來找對應的attribute
+     * @param index_name  通过index_name來防止命名重複
+     */
     void UpdateIndex(std::string table_name,std::string attr_name,std::string index_name);
 
     /**
@@ -76,24 +79,27 @@ public:
      * @return std::string 
      */
     std::string Index2Attr(std::string table_name, std::string attr_name,std::string index_name);
-    
+
     /**
      * @brief 
      * 
      * @param table_name 通过table_name來獲取當前表格的信息 
      */
     void ShowTable(std::string table_name);
-
+    std::string getIndexName(std::string table_name, std::string attr_name);
 private:
-    
-    std::string getTableName(std::string name, int start);
-    
+
+    std::vector<std::string> getTableName();
+
     int getTableLocate(std::string table_name, int block_num);
 
     Index getIndex(std::string table_name);
-    
+
     int getBlockSize(std::string table_name);
 
+    BufferManager *_bfm;
+
+    std::map<std::string, std::string> indexName2tableName;
 };
 
 #endif

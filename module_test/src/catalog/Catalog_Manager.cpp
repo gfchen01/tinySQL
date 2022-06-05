@@ -1,63 +1,89 @@
 #include <iostream>
 #include "catalog/catalog.h"
-#include "buffer/buffer_manager.h"
 
 #define Catalog_Manager_PATH "./catalog_file"
 
-Table::Table(std::string table_name,Attribute attr){
-    this->table_name = table_name;
-    this->attr = attr;
-    this->index.number = 0;
+CatalogManager::CatalogManager(BufferManager *bfm):_bfm(bfm){
+    //創建一個紀錄有多少table的file
+    pageId_t p_Id;
+    char* buffer = _bfm->getPage("All_TableNames", 0, p_Id);
+    std::string str_buff = buffer;
+    std::string star = "*";
+    std::string::size_type idx;
+    idx = str_buff.find(star);
+    char* str;
+    if(idx == std::string::npos)
+        str = "*";
+    else
+        str = "";
+    buffer = strcat(buffer,str);
+    _bfm->modifyPage(p_Id);
+    // buffer save
+
+    //map table -> index
+    std::vector<std::string> VecTableName = getTableName();
+    for(auto iter = VecTableName.begin(); iter != VecTableName.end(); iter++){
+        auto index_cat = getIndex(*iter);
+        for (size_t i = 0; i < index_cat.number; ++i){
+            indexName2tableName.emplace(index_cat.index_name[i], *iter);
+        }
+    }
 }
 
 bool CatalogManager::existTable(std::string table_name){
-    BufferManager buffer_manager = BufferManager();
-    char* buffer = buffer_manager.getPage("All_TableNames", 0);
+    char* buffer = _bfm->getPage("All_TableNames", 0);
     std::string str_buffer = buffer;
-    
+
     //獲取table_name in All_TableNames
-    int number,a,i = 0;
-    std::string table[10000];
+    int number = 0, a = -1, i = 0;
+    std::string table[100];
     while(buffer[i]!='*'){
         if(buffer[i]=='@'){
-            table[number] = str_buffer.substr(a+1, i-a-1);
-            number++;
+            table[number++] = str_buffer.substr(a+1, i-a-1);
             a = i;
         }
         i++;
     }
     //沒有任何table_name存在
-    if(number=0){
+    if(number == 0){
         return false;
     }
     table[number] = str_buffer.substr(a+1,i-a-1);
-    
+    return true;
 }
 
 bool CatalogManager::existAttribute(std::string table_name, std::string attr_name){
-    BufferManager buffer_manager = BufferManager();
     int pageID;
-    char* buffer = buffer_manager.getPage(table_name, 0);
+    char* buffer = _bfm->getPage(table_name, 0);
     std::string str_buffer = buffer;
     Attribute attr = getAttribute(table_name);
     for (int i = 0; i<attr.num; i++){
         if(attr_name == attr.name[i])
             return true;
     }
-    
+
     return false;
 }
 
-std::string CatalogManager::getTableName(std::string table_name, int start){
-    std::string str="";
-    int i;
-    if (table_name=="") return table_name;
-   for (i = 0; table_name[start+i+5]!=' '; i++ ){
-       
-   }
-    str = table_name.substr(start+5,i);
-    i = start + 5 + i;
-    return table_name;
+std::vector<std::string> CatalogManager::getTableName(){
+    char* buffer = _bfm->getPage("All_TableNames", 0);
+    std::string str_buffer = buffer;
+    int a = -1, i = 0;
+    std::vector<std::string> table;
+    while(buffer[i]!='*'){
+        if(buffer[i]=='@'){
+            if (i == 0) a = 0;
+            else{
+                table.push_back( str_buffer.substr(a+1, i-a-1));
+                a = i;
+            }
+        }
+        i++;
+    }
+    if ((i - a - 1) > 0){
+        table.push_back(str_buffer.substr(a + 1,i-a-1));
+    }
+    return table;
 }
 
 void CatalogManager::CreateTable(std::string table_name, Attribute attr){
@@ -65,46 +91,49 @@ void CatalogManager::CreateTable(std::string table_name, Attribute attr){
     if(attr.primary_Key>=0){
         index.number = 1;
         index.index_name[0] = table_name + "_" + attr.name[attr.primary_Key];
-        index.location[0] = attr.primary_Key; 
+        index.location[0] = attr.primary_Key;
     }
     else {
         index.number = 0;
     }
-    
+
     if(existTable(table_name) == true){
         std::cout<<"Error the table has already exist!!!"<<std::endl;
         throw;
     }
-    for (int i=0;i<attr.num;i++){
-        attr.unique[i] = false;    
-    }
+//    for (int i=0;i<attr.num;i++){
+//        attr.unique[i] = false;
+//    }
 
     std::string str="";
-    Table table = Table(table_name,attr);
+//    Table table = Table(table_name,attr);
     std::string filename = table_name;
-    BufferManager buffer_manager = BufferManager();
-    char* buffer = buffer_manager.getPage(filename, 0);
-    
+
+    pageId_t buffer_pId;
+    char* buffer = _bfm->getPage(filename, 0, buffer_pId);
+    _bfm->modifyPage(buffer_pId);
+
     //信息："@table_name%attr_num attr_info#primary#index_num index_info\n"
     str = "@" + table_name;
     str = str + "%" + std::to_string(attr.num);
     for (int i=0; i<attr.num; i++){
-        str = str + " " + std::to_string(attr.type[i]) + " " + attr.name[i] + " " + std::to_string(attr.unique[i]);
+        str = str + " " + std::to_string((int)attr.type[i]) + " " + attr.name[i] + " " + std::to_string(attr.unique[i]);
     }
     str = str + "#" + std::to_string(attr.primary_Key);
     str = str + "#" + std::to_string(index.number);
     for (int i=0; i<index.number; i++){
-        str = str + " " + index.index_name[i] +" "+ std::to_string(index.location[i]);    
+        str = str + " " + index.index_name[i] +" "+ std::to_string(index.location[i]);
     }
     str = str + "\n";
 
     char* tmp = (char*)str.data();
     strcat(buffer,tmp);
-    // buffer save buffer_manager.modifyPage(filename);
+    // buffer save _bfm->modifyPage(filename);
 
-
-    char* all_buff = buffer_manager.getPage("All_TableNames", 0);
-        //buffer = buffer_manager.getPage("All_TableNames", 0);
+    pageId_t allbuff_pId;
+    char* all_buff = _bfm->getPage("All_TableNames", 0, allbuff_pId);
+    _bfm->modifyPage(allbuff_pId);
+    //buffer = _bfm->getPage("All_TableNames", 0);
     std::string table_info = "@";
     table_info = table_info + table_name + "*";
     // buffer save
@@ -116,19 +145,14 @@ void CatalogManager::CreateTable(std::string table_name, Attribute attr){
     }
     i++;*/
     std::string str_buffer = all_buff;
-    str_buffer = str_buffer.substr(0,str_buffer.size()-1);
+    all_buff[str_buffer.size() - 1] = '\0';
     char* tmp_tb = (char*)table_info.data();
-    all_buff  = strcat((char*)str_buffer.data(),tmp_tb);
-    
-    //buffer_manager.modifyPage(filename);
-
-
+    all_buff  = strcat(all_buff,tmp_tb);
 }
 
 CatalogManager::CatalogManager(){
-    BufferManager buffer_manager = BufferManager();
     //創建一個紀錄有多少table的file
-    char* buffer = buffer_manager.getPage("All_TableNames", 0);
+    char* buffer = _bfm->getPage("All_TableNames", 0);
     std::string str_buff = buffer;
     std::string star = "*";
     std::string::size_type idx;
@@ -138,19 +162,18 @@ CatalogManager::CatalogManager(){
         str = "*";
     else
         str = "";
-    buffer = strcat(buffer,str);    
+    buffer = strcat(buffer,str);
     // buffer save
 }
 
 void CatalogManager::DropTable(std::string table_name){
-    BufferManager buffer_manager = BufferManager();
     if(existTable(table_name) == false){
         throw;
     }
     // 一開始打開All_Table 找對應的table_name 然後delete
-    char* buffer = buffer_manager.getPage("All_TableNames", 0);
+    char* buffer = _bfm->getPage("All_TableNames", 0);
     std::string str_buffer = buffer;
-    
+
     //獲取table_name in All_TableNames
     int number,a,i = 0;
     std::string table[10000];
@@ -163,7 +186,7 @@ void CatalogManager::DropTable(std::string table_name){
         i++;
     }
     table[number] = str_buffer.substr(a+1,i-a-1);
-    
+
     //在數組中找出table的位置，刪掉
     for(int i = 1; i <= number; i++){
         if(table_name == table[i]){
@@ -173,7 +196,7 @@ void CatalogManager::DropTable(std::string table_name){
         }
     }
 
-    
+
     // 用buffer_manager來刪除對應的file_name
 
 
@@ -210,15 +233,14 @@ void CatalogManager::UpdateIndex(std::string table_name, std::string attr_name, 
     index_record.number++;
     DropTable(table_name);
     CreateTable(table_name,attr);
-   
-   /*
-    // 用參數table_name 和buffer_Manager要 相應的block (getPage)
-    BufferManager buffer_manager = BufferManager();
-    char* buffer = buffer_manager.getPage(table_name, 0 );
-    // 用Table* a = (Table *)buffer 拿取buffer信息
-    Table* table = (Table*)buffer;
-    // 對a內的index修改, 要用pinPage
-    */
+
+    /*
+     // 用參數table_name 和buffer_Manager要 相應的block (getPage)
+     char* buffer = _bfm->getPage(table_name, 0 );
+     // 用Table* a = (Table *)buffer 拿取buffer信息
+     Table* table = (Table*)buffer;
+     // 對a內的index修改, 要用pinPage
+     */
 }
 
 void CatalogManager::DropIndex(std::string table_name, std::string index_name){
@@ -253,13 +275,12 @@ Index CatalogManager::getIndex(std::string table_name){
     if(existTable(table_name) == false){
         throw;
     }
-    BufferManager buffer_manager = BufferManager();
-    char* buffer = buffer_manager.getPage(table_name,0);
+    char* buffer = _bfm->getPage(table_name,0);
     Index index_record;
     std::string table_info = buffer;
     int current = 0;
     for(int i = 0; i<2; i++){
-        while(table_info[i]!='#'){
+        while(table_info[current]!='#'){
             current++;
         }
         current++;
@@ -295,32 +316,33 @@ Index CatalogManager::getIndex(std::string table_name){
         table_info = table_info.substr(current+1);
     }
     return index_record;
-    
+
 }
 
 Attribute CatalogManager::getAttribute(std::string table_name){
     if(existTable(table_name) == false){
         throw;
     }
-    BufferManager buffer_manager = BufferManager();
-    char* buffer = buffer_manager.getPage(table_name,0);
+    char* buffer = _bfm->getPage(table_name,0);
     Attribute attr_record;
     std::string attr_info = buffer;
     int current = 0;
     while(attr_info[current] != '%'){
         current++;
     }
-    std::string str = attr_info.substr(0, current);
-    attr_info = attr_info.substr(current+1);
-    attr_record.num = atoi(str.c_str());
-    for(int i = 0; i<attr_record.num; i++){
+//    std::string str = attr_info.substr(current, 1);
+    ++current;
+    attr_info = attr_info.substr(current);
+    attr_record.num = atoi(attr_info.substr(0, 1).c_str());
+    attr_info = attr_info.substr(2); // Go over the attr_num field.
+    for(int i = 0; i < attr_record.num; i++){
         for(int j = 0; j<2; j++){
             current = 0 ;
             while(attr_info[current] != ' '){
                 current++;
             }
             if(j == 0)
-                attr_record.type[i] = atoi(attr_info.substr(0,current).c_str());
+                attr_record.type[i] = (BASE_SQL_ValType)atoi(attr_info.substr(0,current).c_str());
             else
                 attr_record.name[i] = attr_info.substr(0,current);
             attr_info = attr_info.substr(current+1);
@@ -334,12 +356,12 @@ Attribute CatalogManager::getAttribute(std::string table_name){
         }
         if(attr_info.substr(0,current) == "1")
             attr_record.unique[i] = true;
-        else   
+        else
             attr_record.unique[i] = false;
-        
+
         attr_info = attr_info.substr(current+1);
     }
-    
+
     // primary key info
     current = 0;
     while(attr_info[current]!='#'){
@@ -355,9 +377,8 @@ Attribute CatalogManager::getAttribute(std::string table_name){
     for(int i=0; i<index_record.number; i++)
         attr_record.index[index_record.location[i]]=true;
 
-
     return attr_record;
-    
+
 }
 
 std::string CatalogManager::Index2Attr(std::string table_name, std::string attr_name, std::string index_name){
@@ -392,10 +413,10 @@ void CatalogManager::ShowTable(std::string table_name){
     std::cout<<"Attribute number:"<<attr_record.num<<std::endl;
     for(int i = 0; i<attr_record.num; i++){
         switch (attr_record.type[i]){
-            case -1:
+            case BASE_SQL_ValType::INT:
                 attr_type = "int";
-                break; 
-            case 0:
+                break;
+            case BASE_SQL_ValType::FLOAT:
                 attr_type = "float";
                 break;
             default:
@@ -415,5 +436,25 @@ void CatalogManager::ShowTable(std::string table_name){
         std::cout<<"Index name:"<<index_record.index_name[i]<<std::endl;
         std::cout<<"Index location"<<index_record.location[i]<<std::endl;
     }
-    
+}
+
+std::string CatalogManager::getIndexName(std::string table_name, std::string attr_name){
+    Index index = getIndex(table_name);
+    Attribute attr = getAttribute(table_name);
+    int location;
+    for(int i = 0; i < attr.num; i++)
+    {
+        if(attr_name == attr.name[i]){
+            location = i;
+            break;
+        }
+    }
+    for(int j = 0; j < 10; j++)
+    {
+        if(location == index.location[j])
+        {
+            return index.index_name[j];
+        }
+    }
+    throw DB_INDEX_NOT_FOUND;
 }

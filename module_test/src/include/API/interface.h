@@ -13,7 +13,7 @@ public:
     Interface(){
         executor = new Exec_Engine();
     }
-    void run();
+    void run(std::ifstream*);
 
 private:
     Exec_Engine *executor;

@@ -91,6 +91,7 @@ private:
     Index getIndex(std::string table_name);
     
     int getBlockSize(std::string table_name);
+
 };
 
 #endif

@@ -413,7 +413,7 @@ bool BP_TREE_T::Insert_in_Leaf(const key_t &key, const value_t &val, BP_TREE_LEA
 
     // TODO : Change this to throw
     // Only allow unique key
-    if (leaf->_k_rowid_pair[pos].first == key) return false;
+    if (leaf->_size > 0 && leaf->_k_rowid_pair[pos].first == key) return false;
 
     // Insert the key-val pair. The space should be pre-allocated at the initialization of node pages.
     memmove((void*)(leaf->_k_rowid_pair + pos + 1), (void*)(leaf->_k_rowid_pair + pos), sizeof(leaf->_k_rowid_pair[0]) * (leaf->_size - pos));

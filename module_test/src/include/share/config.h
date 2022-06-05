@@ -7,7 +7,7 @@ namespace PATH {
     const std::string DATA_PATH = "./DB_DATAFILES/";
     const std::string INDEX_PATH = "./DB_DATAFILES/INDEX/";
     const std::string RECORD_PATH = "./DB_DATAFILES/RECORDS/";
-    const std::string SCHEMA_PATH = "./DB_DATAFILES/SCHEMAS/";
+    const std::string CATALOG_PATH = "./DB_DATAFILES/SCHEMAS/";
 }
 
 #define Index_t uint32_t

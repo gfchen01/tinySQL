@@ -4,7 +4,9 @@
 
 #include "API/interface.h"
 #include "share/data_t.h"
+#include <ios>
 #include <iostream>
+#include <fstream>
 #include <cassert>
 
 void parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec){
@@ -26,16 +28,19 @@ void parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec){
     }
 }
 
-void Interface::run() {
+void Interface::run(std::ifstream *s) {
     std::string query;
     hsql::SQLParserResult result;
     const hsql::SQLStatement* statement;
 
     while(true){
         query.clear();
-        char line[100];
-        std::cin.getline(line, 100);
-        query = std::string(line);
+        std::getline(*s, query);
+
+        if (s->eof()){
+            return;
+        }
+
         hsql::SQLParser::parse(query, &result);
 
         if (result.isValid() && result.size() > 0){
@@ -57,7 +62,7 @@ void Interface::run() {
 
                         std::vector<Tuple> res; // Result container
                         // TODO: Call executor
-//                        executor->selectRecord(tableName, attr_names, where_clauses, res);
+                        executor->selectRecord(tableName, attr_names, where_clauses, res);
                         break;
                     }
                     case hsql::kStmtCreate :{
@@ -68,9 +73,10 @@ void Interface::run() {
                             size_t i = 0;
                             for (auto stmt : *(create->columns)){
                                 attr.name[i] = stmt->name;
-                                attr.type[i] = (int)type_map.at(stmt->type.data_type);
+                                attr.type[i] = type_map.at(stmt->type.data_type);
                                 ++i;
                             }
+                            attr.num = i;
                             size_t j;
                             for (auto cons : *(create->tableConstraints)){
                                 for (j = 0; j < i; ++j){
@@ -83,7 +89,8 @@ void Interface::run() {
                                     }
                                 }
                             }
-//                            executor->createTable(tableName, attr);
+                            executor->createTable(tableName, attr);
+                            break;
                         }
                         else if(create->type == hsql::kCreateIndex){
                             std::string tableName = create->tableName;
@@ -91,7 +98,7 @@ void Interface::run() {
                             std::string attrName;
                             for(auto col : *(create->indexColumns)){
                                 attrName = col;
-//                                executor->createIndex(tableName, indexName, attrName);
+                                executor->createIndex(tableName, indexName, attrName);
                             }
                         }
                         else{
@@ -105,11 +112,11 @@ void Interface::run() {
                         // TODO : Add feature that a insert can specify the attribute
                         if (insert->select == NULL){
                             std::string tableName = insert->tableName;
-                            std::vector<Tuple> rows(1);
+                            Tuple row;
                             for(auto val : *(insert->values)){
-                                rows[0].data.push_back(Data(val));
+                                row.data.push_back(Data(val));
                             }
-//                            executor->insertRecord(tableName, rows);
+                            executor->insertRecord(tableName, row);
                         }
                         else{
                             //TODO : Add select
@@ -124,7 +131,7 @@ void Interface::run() {
                         //Assume the most simple delete, that the expr represents the common where.
                         std::vector<Where> where_clause_dat;
                         parseWhere(del->expr, where_clause_dat);
-//                        executor->deleteRecord(tableName, where_clause_dat);
+                        executor->deleteRecord(tableName, where_clause_dat);
                         break;
 
                     }
@@ -132,7 +139,7 @@ void Interface::run() {
                         const auto* drop = static_cast<const hsql::DropStatement*>(statement);
                         if (drop->type == hsql::kDropTable){
                             std::string tableName(drop->name);
-//                            executor->dropTable(tableName);
+                            executor->dropTable(tableName);
                         }
                         else if(drop->type == hsql::kDropIndex){
                             std::string indexName(drop->indexName);
@@ -147,7 +154,7 @@ void Interface::run() {
                         std::vector<Where> where_dat;
                         parseWhere(update->where, where_dat);
                         //TODO : Add update content
-
+//                        executor->updateRecord(tableName, where_dat);
                         break;
                     }
                 }
@@ -156,5 +163,6 @@ void Interface::run() {
         else {
             std::cout << "INVALID QUERY" << std::endl;
         }
+        result.reset();
     }
 }

@@ -22,12 +22,12 @@ const std::map<hsql::OperatorType, Operator> op_map
          {hsql::OperatorType::kOpNotEquals, Operator::NE}};
 
 enum struct BASE_SQL_ValType
-        {INT,
-         FLOAT,
-         STRING}; ///< MiniSQL supported data types.
+{INT,
+    FLOAT,
+    STRING}; ///< MiniSQL supported data types.
 
 const std::map<hsql::DataType, BASE_SQL_ValType> type_map
-        {{hsql::DataType::CHAR, BASE_SQL_ValType::INT},
+        {{hsql::DataType::INT, BASE_SQL_ValType::INT},
          {hsql::DataType::FLOAT, BASE_SQL_ValType::FLOAT},
          {hsql::DataType::CHAR, BASE_SQL_ValType::STRING},
          {hsql::DataType::DOUBLE, BASE_SQL_ValType::FLOAT},
@@ -35,13 +35,13 @@ const std::map<hsql::DataType, BASE_SQL_ValType> type_map
          {hsql::DataType::DECIMAL, BASE_SQL_ValType::FLOAT}};
 
 enum struct S_ATTRIBUTE
-        {Null,
-         PrimaryKey,
-         Unique}; ///< Special attribute types.
+{Null,
+    PrimaryKey,
+    Unique}; ///< Special attribute types.
 
 /**
  * @brief Basic data element in a tuple.
- * 
+ *
  * types: int:-1 float:0 string:1-255
  */
 struct Data{
@@ -134,17 +134,17 @@ struct Data{
 struct Where{
     Data data;
     Operator relation_operator;
-    std::string attr_name;
+    std::string attr_name; ///< The attribute to perform select on
 };
 //used to confirm the attribute, max32
 /**
  * @brief The attributes for a schema
- * 
+ *
  * Define the attributes of a schema.
  */
 struct Attribute{
     int num;         ///< number of property
-    int type[32];
+    BASE_SQL_ValType type[32];
     std::string name[32];    ///< property name
     bool unique[32] = {false};    ///<  uniqure or not
     bool index[32] = {false};     ///< index exist or not
@@ -154,7 +154,7 @@ struct Attribute{
 // 这个是不是应该交给Index Manager来定义？
 /**
  * @brief Index desciption for a table.
- * 
+ *
  */
 struct Index{
     int number;             ///< number of indexes
@@ -164,13 +164,23 @@ struct Index{
 
 /**
  * @brief One row in a table
- * 
+ *
  * Tuple is a row in a table.
  */
 class Tuple{
 public:
     std::vector<Data> data;
-private:  
+    bool isDeleted_;
+public:
+    Tuple() : isDeleted_(false) {};
+    Tuple(const Tuple &tuple);  //拷贝元组
+    void addData(Data data);  //新增元组
+    std::vector<Data> getData() const;  //返回数据
+    int getSize(){
+        return (int)data.size();
+    }  //返回元组的数据数量
+    bool isDeleted();
+    void setDeleted();
 };
 
 
@@ -183,17 +193,12 @@ public:
     Attribute attr;
     Table(){};
     Table(std::string table_name, Attribute attr);
-    Table(const Table &index);
-
-// 这个真的必要吗？是不是应该交给API来做？SetIndex应该是一个事务才对。
-/***********
- * 
-    int setIndex(int index, std::string index_name);  //插入索引，输入要建立索引的Attribute的编号，以及索引的名字，成功返回1失败返回0
-    int dropIndex(std::string index_name);  //删除索引，输入建立的索引的名字，成功返回1失败返回0
-***********/
+    Table(const Table &table);
+    std::string getTableName();
+    Attribute getAttr();
+    std::vector<Tuple>& getTuple();
+    Index getIndex();
     void showTable(std::string table_name);
-
-    
 };
 
 #endif

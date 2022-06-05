@@ -193,7 +193,7 @@ int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block
     FILE* f = fopen(file_name.c_str() , "r");
     // 打开失败返回-1
     if (f == NULL)
-        return -1;
+        f = fopen(file_name.c_str() , "w+");
     // 将文件指针定位到对应位置
     fseek(f , PAGESIZE * block_id , SEEK_SET);
     // 获取页的句柄
@@ -224,7 +224,7 @@ int BufferManager::flushPage(int page_id , std::string file_name , int block_id)
     FILE* f = fopen(file_name.c_str() , "r+");
     // 其实这里有写多余，因为打开一个文件读总是能成功。
     if (f == NULL)
-        return -1;
+        f = fopen(file_name.c_str() , "w+");
     // 将文件指针定位到对应位置
     fseek(f , PAGESIZE * block_id , SEEK_SET);
     // 获取页的句柄
