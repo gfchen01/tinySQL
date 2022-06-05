@@ -13,19 +13,31 @@ enum struct Operator {
     GT,GE,LT,LE,EQ,NE
 }; ///< Comparasion
 
-typedef unsigned SQL_ValType;
+const std::map<hsql::OperatorType, Operator> op_map
+        {{hsql::OperatorType::kOpGreater, Operator::GT},
+         {hsql::OperatorType::kOpGreaterEq, Operator::GE},
+         {hsql::OperatorType::kOpLess, Operator::LT},
+         {hsql::OperatorType::kOpLessEq, Operator::LE},
+         {hsql::OperatorType::kOpEquals, Operator::EQ},
+         {hsql::OperatorType::kOpNotEquals, Operator::NE}};
 
 enum struct BASE_SQL_ValType
         {INT,
          FLOAT,
          STRING}; ///< MiniSQL supported data types.
 
+const std::map<hsql::DataType, BASE_SQL_ValType> type_map
+        {{hsql::DataType::CHAR, BASE_SQL_ValType::INT},
+         {hsql::DataType::FLOAT, BASE_SQL_ValType::FLOAT},
+         {hsql::DataType::CHAR, BASE_SQL_ValType::STRING},
+         {hsql::DataType::DOUBLE, BASE_SQL_ValType::FLOAT},
+         {hsql::DataType::VARCHAR, BASE_SQL_ValType::STRING},
+         {hsql::DataType::DECIMAL, BASE_SQL_ValType::FLOAT}};
+
 enum struct S_ATTRIBUTE
         {Null,
          PrimaryKey,
          Unique}; ///< Special attribute types.
-
-;
 
 /**
  * @brief Basic data element in a tuple.
@@ -56,7 +68,7 @@ struct Data{
             }
             case hsql::kExprLiteralString :{
                 type = BASE_SQL_ValType::STRING;
-                strcpy(data_meta.s_data, expr->getName());
+                strcpy(data_meta.s_data, expr->name);
                 break;
             }
             default:{
@@ -132,7 +144,7 @@ struct Where{
  */
 struct Attribute{
     int num;         ///< number of property
-    BASE_SQL_ValType type[32];
+    int type[32];
     std::string name[32];    ///< property name
     bool unique[32] = {false};    ///<  uniqure or not
     bool index[32] = {false};     ///< index exist or not
@@ -183,6 +195,5 @@ public:
 
     
 };
-
 
 #endif

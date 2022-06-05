@@ -11,12 +11,12 @@
 class Interface{
 public:
     Interface(){
-        executor = new Executor();
+        executor = new Exec_Engine();
     }
     void run();
 
 private:
-    Executor *executor;
+    Exec_Engine *executor;
 };
 
 #endif //TINYSQL_TEST_INTERFACE_H

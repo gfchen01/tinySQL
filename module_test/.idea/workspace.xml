@@ -18,7 +18,16 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="712c2f49-e0cb-4c43-b579-db61b43c4eaa" name="Changes" comment="" />
+    <list default="true" id="712c2f49-e0cb-4c43-b579-db61b43c4eaa" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/API/exec_engine.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/API/exec_engine.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/API/interface.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/API/interface.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/include/API/exec_engine.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/include/API/exec_engine.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/include/API/interface.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/include/API/interface.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/include/share/data_t.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/include/share/data_t.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/test_main.cpp" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -66,12 +75,12 @@
   }
 }</component>
   <component name="RunManager" selected="CMake Application.tinySQL_test">
-    <configuration name="SQLparser" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="tinySQL_test" TARGET_NAME="SQLparser" CONFIG_NAME="Debug">
+    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
       </method>
     </configuration>
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
+    <configuration name="SQLparser" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="tinySQL_test" TARGET_NAME="SQLparser" CONFIG_NAME="Debug">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -96,6 +105,9 @@
       <updated>1654156722823</updated>
       <workItem from="1654156724018" duration="911000" />
       <workItem from="1654240054764" duration="20887000" />
+      <workItem from="1654398155963" duration="4635000" />
+      <workItem from="1654403060568" duration="11000" />
+      <workItem from="1654403370008" duration="5072000" />
     </task>
     <servers />
   </component>
@@ -120,9 +132,9 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/test_main.cpp</url>
-          <line>42</line>
-          <option name="timeStamp" value="9" />
+          <url>file://$PROJECT_DIR$/src/API/interface.cpp</url>
+          <line>40</line>
+          <option name="timeStamp" value="31" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

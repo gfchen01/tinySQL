@@ -5,19 +5,24 @@
 #include "API/interface.h"
 #include "share/data_t.h"
 #include <iostream>
+#include <cassert>
 
-BASE_SQL_ValType convertType(hsql::ColumnType t){
-    switch (t.data_type) {
-        case hsql::DataType::CHAR :{
-            return BASE_SQL_ValType::STRING;
-        }
-        case hsql::DataType::FLOAT :
-        case hsql::DataType::DOUBLE :{
-            return BASE_SQL_ValType::FLOAT;
-        }
-        case hsql::DataType::INT :{
-            return BASE_SQL_ValType::INT;
-        }
+void parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec){
+    // For where clause, if one side is kExprOperator, then the other side has to be kExprOperator
+    if (Clause->expr->type == hsql::kExprOperator){
+        assert(Clause->expr2->type == hsql::kExprOperator);
+        parseWhere(Clause->expr, where_vec);
+        parseWhere(Clause->expr2, where_vec);
+    }
+    else{
+        assert(Clause->expr->type == hsql::kExprColumnRef);
+
+        Where w;
+        w.attr_name = Clause->expr->name;
+        w.relation_operator = op_map.at(Clause->opType);
+        w.data = Data(Clause->expr2);
+
+        where_vec.push_back(w);
     }
 }
 
@@ -28,7 +33,9 @@ void Interface::run() {
 
     while(true){
         query.clear();
-        std::cin >> query;
+        char line[100];
+        std::cin.getline(line, 100);
+        query = std::string(line);
         hsql::SQLParser::parse(query, &result);
 
         if (result.isValid() && result.size() > 0){
@@ -37,23 +44,31 @@ void Interface::run() {
                 switch (statement->type()) {
                     case hsql::kStmtSelect:{
                         const auto* select = static_cast<const hsql::SelectStatement*>(statement);
-                        Where w;
+
                         std::string tableName = select->fromTable->getName();
-                        w.attr_name = select->whereClause->expr->getName();
-                        Data d(select->whereClause->expr->expr2);
-                        w.data = d; // TODO : increase efficiency
+
+                        std::vector<std::string> attr_names;
+                        for (auto sel : *(select->selectList)){
+                            attr_names.push_back(sel->name);
+                        }
+
+                        std::vector<Where> where_clauses;
+                        parseWhere(select->whereClause, where_clauses);
+
+                        std::vector<Tuple> res; // Result container
                         // TODO: Call executor
+//                        executor->selectRecord(tableName, attr_names, where_clauses, res);
                         break;
                     }
                     case hsql::kStmtCreate :{
                         const auto* create = static_cast<const hsql::CreateStatement*>(statement);
-                        if (create->type == hsql::kCreateTable){
+                        if (create->type == hsql::kCreateTable){ // Only handle create table
                             std::string tableName = create->tableName;
                             Attribute attr;
                             size_t i = 0;
                             for (auto stmt : *(create->columns)){
                                 attr.name[i] = stmt->name;
-                                attr.type[i] = convertType(stmt->type);
+                                attr.type[i] = (int)type_map.at(stmt->type.data_type);
                                 ++i;
                             }
                             size_t j;
@@ -68,14 +83,78 @@ void Interface::run() {
                                     }
                                 }
                             }
-
+//                            executor->createTable(tableName, attr);
+                        }
+                        else if(create->type == hsql::kCreateIndex){
+                            std::string tableName = create->tableName;
+                            std::string indexName = create->indexName;
+                            std::string attrName;
+                            for(auto col : *(create->indexColumns)){
+                                attrName = col;
+//                                executor->createIndex(tableName, indexName, attrName);
+                            }
                         }
                         else{
                             std::cout << "Invalid operation" << std::endl;
                         }
+                        break;
+
+                    }
+                    case hsql::kStmtInsert :{
+                        const auto* insert = static_cast<const hsql::InsertStatement*>(statement);
+                        // TODO : Add feature that a insert can specify the attribute
+                        if (insert->select == NULL){
+                            std::string tableName = insert->tableName;
+                            std::vector<Tuple> rows(1);
+                            for(auto val : *(insert->values)){
+                                rows[0].data.push_back(Data(val));
+                            }
+//                            executor->insertRecord(tableName, rows);
+                        }
+                        else{
+                            //TODO : Add select
+                            throw DB_FAILED;
+                        }
+                        break;
+
+                    }
+                    case hsql::kStmtDelete :{
+                        const auto* del = static_cast<const hsql::DeleteStatement*>(statement);
+                        std::string tableName = del->tableName;
+                        //Assume the most simple delete, that the expr represents the common where.
+                        std::vector<Where> where_clause_dat;
+                        parseWhere(del->expr, where_clause_dat);
+//                        executor->deleteRecord(tableName, where_clause_dat);
+                        break;
+
+                    }
+                    case hsql::kStmtDrop :{
+                        const auto* drop = static_cast<const hsql::DropStatement*>(statement);
+                        if (drop->type == hsql::kDropTable){
+                            std::string tableName(drop->name);
+//                            executor->dropTable(tableName);
+                        }
+                        else if(drop->type == hsql::kDropIndex){
+                            std::string indexName(drop->indexName);
+//                            executor->dropIndex(indexName);
+                        }
+                        break;
+                    }
+                    case hsql::kStmtUpdate :{
+                        const auto* update = static_cast<const hsql::UpdateStatement*>(statement);
+                        std::string tableName = update->table->name;
+
+                        std::vector<Where> where_dat;
+                        parseWhere(update->where, where_dat);
+                        //TODO : Add update content
+
+                        break;
                     }
                 }
             }
+        }
+        else {
+            std::cout << "INVALID QUERY" << std::endl;
         }
     }
 }
