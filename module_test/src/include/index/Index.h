@@ -24,6 +24,7 @@ public:
 
     /**
      * @brief Drop an Index of an attr.
+     * User should make sure the table exists.
      * 
      * @param tableName 
      * @param attr

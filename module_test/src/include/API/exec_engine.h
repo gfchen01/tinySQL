@@ -18,7 +18,7 @@
 
 class Exec_Engine{
 public:
-    Exec_Engine():index_manager(&bfm), record_manager(&bfm), catalog_manager(&bfm){};
+    Exec_Engine():index_manager(&bfm), catalog_manager(&bfm) ,record_manager(&bfm, &catalog_manager, &index_manager){};
     void createTable(std::string &table_name, Attribute &attr);
     void dropTable(std::string &table_name);
     void selectRecord(std::string &table_name, std::vector<std::string>& attr_names, std::vector<Where>& wheres, std::vector<Tuple>& result); //recordManager

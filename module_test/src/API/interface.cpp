@@ -72,6 +72,7 @@ void Interface::serialOutput(std::vector<Tuple> &tuples) {
         }
         _os << std::endl;
     }
+    _os.flush();
 }
 
 void Interface::run() {
@@ -81,7 +82,7 @@ void Interface::run() {
 
     while(true){
         query.clear();
-        std::getline(_is, query);
+        std::getline(_is, query, ';');
 
         if (_is.eof()){
             return;
@@ -115,7 +116,7 @@ void Interface::run() {
                         catch (db_err_t &db_err){
                             showErrMsg(db_err);
                         }
-
+                        serialOutput(res);
                         break;
                     }
                     case hsql::kStmtCreate :{
@@ -130,6 +131,7 @@ void Interface::run() {
                                 ++i;
                             }
                             attr.num = i;
+                            attr.primary_Key = -1;
                             int j;
                             for (auto cons : *(create->tableConstraints)){
                                 for (j = 0; j < i; ++j){
@@ -142,12 +144,13 @@ void Interface::run() {
                                     }
                                 }
                             }
-                            try{
-                                executor->createTable(tableName, attr);
-                            }
-                            catch (db_err_t &db_err){
-                                showErrMsg(db_err);
-                            }
+                            executor->createTable(tableName, attr);
+//                            try{
+//                                executor->createTable(tableName, attr);
+//                            }
+//                            catch (db_err_t &db_err){
+//                                showErrMsg(db_err);
+//                            }
                             break;
                         }
                         else if(create->type == hsql::kCreateIndex){
@@ -173,11 +176,11 @@ void Interface::run() {
                     case hsql::kStmtInsert :{
                         const auto* insert = static_cast<const hsql::InsertStatement*>(statement);
                         // TODO : Add feature that a insert can specify the attribute
-                        if (insert->select == NULL){
+                        if (insert->select == nullptr){
                             std::string tableName = insert->tableName;
                             Tuple row;
                             for(auto val : *(insert->values)){
-                                row.data.push_back(Data(val));
+                                row.data.emplace_back(val);
                             }
 //                            try{
 //                                executor->insertRecord(tableName, row);
@@ -200,12 +203,13 @@ void Interface::run() {
                         //Assume the most simple delete, that the expr represents the common where.
                         std::vector<Where> where_clause_dat;
                         parseWhere(del->expr, where_clause_dat);
-                        try{
-                            executor->deleteRecord(tableName, where_clause_dat);
-                        }
-                        catch (db_err_t &db_err){
-                            showErrMsg(db_err);
-                        }
+//                        try{
+//                            executor->deleteRecord(tableName, where_clause_dat);
+//                        }
+//                        catch (db_err_t &db_err){
+//                            showErrMsg(db_err);
+//                        }
+                        executor->deleteRecord(tableName, where_clause_dat);
                         break;
 
                     }

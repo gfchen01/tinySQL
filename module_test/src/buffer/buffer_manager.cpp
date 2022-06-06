@@ -63,7 +63,7 @@ inline void Page::setDirty(bool dirty) {
     dirty_ = dirty;
 }
 
-inline bool Page::getDirty() {
+inline bool Page::isDirty() {
     return dirty_;
 }
 
@@ -108,7 +108,7 @@ BufferManager::~BufferManager() {
         int block_id;
         file_name = Frames[i].getFileName();
         block_id = Frames[i].getBlockId();
-        flushPage(i , file_name , block_id);
+        flushPage(i);
     }
 }
 
@@ -127,7 +127,7 @@ void BufferManager::initialize(int frame_size) {
  * @return char* 一个页的句柄
  */
 
-char* BufferManager::getPage(std::string file_name , int block_id){
+char* BufferManager::getPage(const std::string& file_name , int block_id){
     int page_id = getPageId(file_name , block_id);
     if (page_id == -1) {
         page_id = getEmptyPageId();
@@ -137,7 +137,7 @@ char* BufferManager::getPage(std::string file_name , int block_id){
     return Frames[page_id].getBuffer();
 }
 
-char* BufferManager::getPage(std::string file_name , int block_id , pageId_t& pageId){
+char* BufferManager::getPage(const std::string& file_name , int block_id , pageId_t& pageId){
     pageId_t page_id = getPageId(file_name , block_id);
     if (page_id == -1) {
         page_id = getEmptyPageId();
@@ -187,14 +187,15 @@ int BufferManager::unpinPage(int page_id) {
  * @param block_id 块ID
  * @return int 成功返回0，否则返回-1
  */
-int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block_id) {
+int BufferManager::loadDiskBlock(int page_id , const std::string& file_name , int block_id) {
     // 初始化一个页
     Frames[page_id].initialize();
     // 打开磁盘文件
     FILE* f = fopen(file_name.c_str() , "r");
     // 打开失败返回-1
-    if (f == NULL)
+    if (f == nullptr)
         throw DB_FILE_NOT_FOUND;
+
     // 将文件指针定位到对应位置
     fseek(f , PAGESIZE * block_id , SEEK_SET);
     // 获取页的句柄
@@ -209,6 +210,9 @@ int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block
     Frames[page_id].setPinCount(0);
     Frames[page_id].setDirty(false);
     Frames[page_id].setAvaliable(false);
+
+    fname_page_map.emplace(file_name, page_id);
+
     return 0;
 }
 
@@ -220,12 +224,19 @@ int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block
  * @param block_id 页ID
  * @return int 成功返回0，否则返回-1
  */
-int BufferManager::flushPage(int page_id , std::string file_name , int block_id) {
+int BufferManager::flushPage(pageId_t page_id) {
+    // Add this to avoid write of an empty file_name, a file that has been deleted, etc.
+    auto file_path = Frames[page_id].getFileName();
+    auto block_id = Frames[page_id].getBlockId();
+
+    auto iter = fname_page_map.find(file_path);
+    if (iter == fname_page_map.end()) return -1;
+
     // 打开文件
-    FILE* f = fopen(file_name.c_str() , "r+");
+    FILE* f = fopen(file_path.c_str() , "r+");
     // 其实这里有写多余，因为打开一个文件读总是能成功。
-    if (f == NULL)
-        f = fopen(file_name.c_str() , "w+");
+    if (f == nullptr)
+        throw DB_FILE_NOT_FOUND;
     // 将文件指针定位到对应位置
     fseek(f , PAGESIZE * block_id , SEEK_SET);
     // 获取页的句柄
@@ -245,14 +256,11 @@ int BufferManager::flushPage(int page_id , std::string file_name , int block_id)
  * @return int 找到返回对应页ID，否则返回-1
  */
 pageId_t BufferManager::getPageId(std::string file_name , int block_id) {
-    for (int i = 0;i < frame_size_;i++) {
-        std::string tmp_file_name = Frames[i].getFileName();
-        int tmp_block_id = Frames[i].getBlockId();
-        if (tmp_file_name == file_name && tmp_block_id == block_id)
-            return i;
-    }
-    return -1;
+    auto page_id_iter = fname_page_map.find(file_name);
+    if (page_id_iter != fname_page_map.end()) return page_id_iter->second;
+    else return -1;
 }
+
 /**
  * @brief 获取文件块数
  *
@@ -275,7 +283,8 @@ int BufferManager::getBlockNum(std::string file_name){
  */
 pageId_t BufferManager::getEmptyPageId(){
     for (int i = 0;i < frame_size_;i++) {
-        if (Frames[i].getAvaliable() == true)
+        // Avaliable means the page doesn't hold a disk block.
+        if (Frames[i].getAvaliable())
             return i;
     }
     int check = 0;
@@ -287,7 +296,8 @@ pageId_t BufferManager::getEmptyPageId(){
     }
     if(check == 0)
         throw DB_ALL_PAGES_PINNED;
-    while(1){
+
+    while(true){
         timeb t;
         ftime(&t);
         long long now = t.time * 1000 + t.millitm + 1;
@@ -297,12 +307,13 @@ pageId_t BufferManager::getEmptyPageId(){
                 now = Frames[i].getTime();
             }
         }
-        if (Frames[current_position_].getDirty() == true) {
+        if (Frames[current_position_].isDirty()) {
             std::string file_name = Frames[current_position_].getFileName();
             int block_id = Frames[current_position_].getBlockId();
-            flushPage(current_position_ , file_name , block_id);
+            flushPage(current_position_);
         }
         // 删除页
+        fname_page_map.erase(Frames[current_position_].getFileName());
         Frames[current_position_].initialize();
         // 返回页号
         return current_position_;

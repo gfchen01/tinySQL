@@ -14,6 +14,9 @@ public:
     Interface(std::istream &is, std::ostream &os):_is(is), _os(os){
         executor = new Exec_Engine();
     }
+    ~Interface(){
+        delete executor;
+    }
     void run();
     void showErrMsg(db_err_t &dbErr);
     void serialOutput(std::vector<Tuple> &tuples);

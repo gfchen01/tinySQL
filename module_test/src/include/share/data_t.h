@@ -128,15 +128,15 @@ struct Data{
     friend std::ostream& operator<<(std::ostream& os, const Data& data){
         switch(data.type){
             case BASE_SQL_ValType::INT:{
-                os << data.data_meta.i_data << ' | ';
+                os << data.data_meta.i_data << " | ";
                 break;
             }
             case BASE_SQL_ValType::FLOAT:{
-                os << data.data_meta.f_data << ' | ';
+                os << data.data_meta.f_data << " | ";
                 break;
             }
             case BASE_SQL_ValType::STRING:{
-                os << data.data_meta.s_data << ' | ';
+                os << data.data_meta.s_data << " | ";
                 break;
             }
         }

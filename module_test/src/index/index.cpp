@@ -17,13 +17,12 @@ void IndexManager::CreateIndex(const std::string& indexName) {
     bpTree_Block* b = reinterpret_cast<bpTree_Block*>(raw);
 
     b->init(0, INVALID_BLOCK_ID);
-    _bfm->flushPage(header_id, fileName, 0);
+    _bfm->flushPage(header_id);
 }
 
 void IndexManager::DropIndex(const std::string &indexName) {
-    std::string fileName = PATH::INDEX_PATH + indexName;
-    auto ret = remove(fileName.c_str());
-    if (ret != 0) throw DB_FILE_NOT_FOUND;
+    std::string file_path = PATH::INDEX_PATH + indexName;
+    _bfm->removeFile(file_path);
 }
 
 void IndexManager::InsertId(const std::string &indexName, const Data &Key, const Index_t &rec_ptr) {

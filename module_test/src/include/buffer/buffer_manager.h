@@ -16,11 +16,12 @@
 #include <vector>
 #include <string>
 #include <sys/timeb.h>
-#include "share/config.h"
-#include "share/err_type.h"
-
 #include <sys/stat.h>
 #include <filesystem>
+#include <map>
+
+#include "share/config.h"
+#include "share/err_type.h"
 
 /**
  * @brief Page类。磁盘文件中的每一块对应内存中的一个页（page)
@@ -37,7 +38,7 @@ class Page {
         void setPinCount(int pin_count);
         int getPinCount();
         void setDirty(bool dirty);
-        bool getDirty();
+        bool isDirty();
         void setAvaliable(bool avaliable);
         bool getAvaliable();
         void setTime();
@@ -62,16 +63,16 @@ class BufferManager {
         BufferManager();
         BufferManager(int frame_size);
         ~BufferManager();
-        char* getPage(std::string file_name , int block_id); /**< 通过页号得到页的句柄(一个页的头地址) */
-        char* getPage(std::string file_name, int block_id, pageId_t& pageId);
+        char* getPage(const std::string& file_name , int block_id); /**< 通过页号得到页的句柄(一个页的头地址) */
+        char* getPage(const std::string& file_name, int block_id, pageId_t& pageId);
         void modifyPage(int page_id); /**< 标记page_id所对应的页已经被修改 */
         void pinPage(int page_id); /**< 钉住一个页 */
         int unpinPage(int page_id); /**< 解除一个页的钉住状态(需要注意的是一个页可能被多次钉住，该函数只能解除一次),如果对应页的pin_count_为0，则返回-1 */
-        int flushPage(int page_id , std::string file_name , int block_id); /**< 将对应内存页写入对应文件的对应块。 */
+        int flushPage(pageId_t page_id); /**< 将对应内存页写入对应文件的对应块。 */
         int getPageId(std::string file_name , int block_id); /**< 获取对应文件的对应块在内存中的页号，没有找到返回-1 */
 
-        size_t getFileSize(std::string file_name){
-            struct stat file_state;
+        static size_t getFileSize(std::string file_name){
+            struct stat file_state{};
             const char *path = file_name.c_str();
             if (stat(path, &file_state) == -1){
                 std::cout << "File path error" << std::endl;
@@ -81,25 +82,35 @@ class BufferManager {
             return size;
         }
 
-        bool isFileExists(std::string path){
+        static bool FileExists(const std::string& path){
             return std::filesystem::exists(path);
         }
 
-        void createEmptyFile(std::string path){
+        static void createEmptyFile(const std::string& path){
             FILE* f;
             f = fopen(path.c_str(), "w");
             if (f == nullptr) throw DB_FAILED;
             fclose(f);
         }
 
+        void removeFile(const std::string& path){
+            remove(path.c_str());
+            auto iter = fname_page_map.find(path);
+            if(iter != fname_page_map.end()){ // Bfm still has a block of the file. Clear.
+                Frames[iter->second].initialize();
+            }
+        }
+
         int getBlockNum(std::string fileName);
-//    private:
+
+    private:
         Page* Frames; /**< 缓冲池，实际上就是一个元素为Page的数组，实际内存空间将分配在堆上 */
         int frame_size_; /**< 记录总页数 */
         int current_position_; /**< 时钟替换策略需要用到的变量 */
         void initialize(int frame_size); /**< 实际初始化函数 */
         int getEmptyPageId(); /**< 获取一个闲置的页的页号 */
-        int loadDiskBlock(int page_id , std::string file_name , int block_id); /**< 将对应文件的对应块载入对应内存页，对于文件不存在返回-1，否则返回0 */
+        int loadDiskBlock(int page_id , const std::string& file_name , int block_id); /**< 将对应文件的对应块载入对应内存页，对于文件不存在返回-1，否则返回0 */
+        std::map<std::string, pageId_t> fname_page_map; /**< Map the file name to page id for faster search. */
 };
 
 #endif
