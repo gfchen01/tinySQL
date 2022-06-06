@@ -5,6 +5,8 @@
 #include <string>
 #include "buffer/buffer_manager.h"
 
+#define ALL_TABLE_PATH PATH::CATALOG_PATH+"All_TableNames"
+
 class CatalogManager{
 public:
     CatalogManager(BufferManager *bfm);
@@ -86,16 +88,20 @@ public:
      * @param table_name 通过table_name來獲取當前表格的信息 
      */
     void ShowTable(std::string table_name);
+
     std::string getIndexName(std::string table_name, std::string attr_name);
+
+    std::string indexName2table(std::string &index_name) const{
+        auto iter = indexName2tableName.find(index_name);
+        if (iter == indexName2tableName.end()) throw DB_INDEX_NOT_FOUND;
+        return iter->second;
+    }
+
 private:
 
     std::vector<std::string> getTableName();
 
-    int getTableLocate(std::string table_name, int block_num);
-
     Index getIndex(std::string table_name);
-
-    int getBlockSize(std::string table_name);
 
     BufferManager *_bfm;
 

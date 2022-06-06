@@ -136,6 +136,7 @@ char* BufferManager::getPage(std::string file_name , int block_id){
     Frames[page_id].setTime();
     return Frames[page_id].getBuffer();
 }
+
 char* BufferManager::getPage(std::string file_name , int block_id , pageId_t& pageId){
     pageId_t page_id = getPageId(file_name , block_id);
     if (page_id == -1) {
@@ -193,7 +194,7 @@ int BufferManager::loadDiskBlock(int page_id , std::string file_name , int block
     FILE* f = fopen(file_name.c_str() , "r");
     // 打开失败返回-1
     if (f == NULL)
-        f = fopen(file_name.c_str() , "w+");
+        throw DB_FILE_NOT_FOUND;
     // 将文件指针定位到对应位置
     fseek(f , PAGESIZE * block_id , SEEK_SET);
     // 获取页的句柄

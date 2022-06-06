@@ -81,11 +81,15 @@ int main()
 //    fs << drop_query;
 //    fs.flush();
 //    fs.close();
-    std::ifstream fs;
-    fs.open("QueryTest.txt", std::fstream::in | std::fstream::out);
-    Interface anInterface;
-    anInterface.run(&fs);
-    fs.close();
+    std::ifstream ifs;
+    ifs.open("QueryTest.txt", std::fstream::in);
+
+//    std::ofstream ofs;
+//    ofs.open("Output.txt", std::fstream::out);
+
+    Interface anInterface(ifs, std::cout);
+    anInterface.run();
+    ifs.close();
 
 //    CatalogManager c_manager;
 //    c_manager.CreateTable("Student",)

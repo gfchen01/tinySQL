@@ -9,8 +9,9 @@
 #include <fstream>
 #include <cassert>
 
-void parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec){
+void Interface::parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec){
     // For where clause, if one side is kExprOperator, then the other side has to be kExprOperator
+    if (Clause == nullptr) return;
     if (Clause->expr->type == hsql::kExprOperator){
         assert(Clause->expr2->type == hsql::kExprOperator);
         parseWhere(Clause->expr, where_vec);
@@ -28,24 +29,69 @@ void parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec){
     }
 }
 
-void Interface::run(std::ifstream *s) {
+void Interface::showErrMsg(db_err_t &dbErr) {
+    switch (dbErr) {
+        case DB_KEY_NOT_FOUND:{
+            _os << "Table doesn't have the given attribute or value\n";
+            break;
+        }
+        case DB_FILE_NOT_FOUND:{
+            _os << "File doesn't exist\n";
+            break;
+        }
+        case DB_TABLE_ALREADY_EXIST:{
+            _os << "Table already exist\n";
+            break;
+
+        }
+        case DB_COLUMN_NAME_NOT_EXIST:{
+            _os << "Table attribute not exist\n";
+            break;
+
+        }
+        case DB_INDEX_ALREADY_EXIST:{
+            _os << "Index already exist on given attribute or index name already exist\n";
+            break;
+
+        }
+        case DB_INDEX_NOT_FOUND:{
+            _os << "Index doesn't exist\n" ;
+            break;
+
+        }
+        default:{
+            _os << "DB ERROR!";
+        }
+    }
+}
+
+void Interface::serialOutput(std::vector<Tuple> &tuples) {
+    for (auto tuple : tuples){
+        for (auto dat : tuple.data){
+            _os << dat;
+        }
+        _os << std::endl;
+    }
+}
+
+void Interface::run() {
     std::string query;
     hsql::SQLParserResult result;
     const hsql::SQLStatement* statement;
 
     while(true){
         query.clear();
-        std::getline(*s, query);
+        std::getline(_is, query);
 
-        if (s->eof()){
+        if (_is.eof()){
             return;
         }
 
         hsql::SQLParser::parse(query, &result);
 
         if (result.isValid() && result.size() > 0){
-            for (size_t i = 0; i < result.size(); ++i){
-                statement = result.getStatement(i);
+            for (size_t k = 0; k < result.size(); ++k){
+                statement = result.getStatement(k);
                 switch (statement->type()) {
                     case hsql::kStmtSelect:{
                         const auto* select = static_cast<const hsql::SelectStatement*>(statement);
@@ -54,7 +100,8 @@ void Interface::run(std::ifstream *s) {
 
                         std::vector<std::string> attr_names;
                         for (auto sel : *(select->selectList)){
-                            attr_names.push_back(sel->name);
+                            if (sel->isType(hsql::kExprStar)) continue;
+                            attr_names.emplace_back(sel->name);
                         }
 
                         std::vector<Where> where_clauses;
@@ -62,7 +109,13 @@ void Interface::run(std::ifstream *s) {
 
                         std::vector<Tuple> res; // Result container
                         // TODO: Call executor
-                        executor->selectRecord(tableName, attr_names, where_clauses, res);
+                        try{
+                            executor->selectRecord(tableName, attr_names, where_clauses, res);
+                        }
+                        catch (db_err_t &db_err){
+                            showErrMsg(db_err);
+                        }
+
                         break;
                     }
                     case hsql::kStmtCreate :{
@@ -70,14 +123,14 @@ void Interface::run(std::ifstream *s) {
                         if (create->type == hsql::kCreateTable){ // Only handle create table
                             std::string tableName = create->tableName;
                             Attribute attr;
-                            size_t i = 0;
+                            int i = 0;
                             for (auto stmt : *(create->columns)){
                                 attr.name[i] = stmt->name;
                                 attr.type[i] = type_map.at(stmt->type.data_type);
                                 ++i;
                             }
                             attr.num = i;
-                            size_t j;
+                            int j;
                             for (auto cons : *(create->tableConstraints)){
                                 for (j = 0; j < i; ++j){
                                     if (cons->type == hsql::ConstraintType::PrimaryKey){
@@ -89,7 +142,12 @@ void Interface::run(std::ifstream *s) {
                                     }
                                 }
                             }
-                            executor->createTable(tableName, attr);
+                            try{
+                                executor->createTable(tableName, attr);
+                            }
+                            catch (db_err_t &db_err){
+                                showErrMsg(db_err);
+                            }
                             break;
                         }
                         else if(create->type == hsql::kCreateIndex){
@@ -98,7 +156,12 @@ void Interface::run(std::ifstream *s) {
                             std::string attrName;
                             for(auto col : *(create->indexColumns)){
                                 attrName = col;
-                                executor->createIndex(tableName, indexName, attrName);
+                                try{
+                                    executor->createIndex(tableName, indexName, attrName);
+                                }
+                                catch (db_err_t &db_err){
+                                    showErrMsg(db_err);
+                                }
                             }
                         }
                         else{
@@ -116,6 +179,12 @@ void Interface::run(std::ifstream *s) {
                             for(auto val : *(insert->values)){
                                 row.data.push_back(Data(val));
                             }
+//                            try{
+//                                executor->insertRecord(tableName, row);
+//                            }
+//                            catch (db_err_t &db_err){
+//                                showErrMsg(db_err);
+//                            }
                             executor->insertRecord(tableName, row);
                         }
                         else{
@@ -131,7 +200,12 @@ void Interface::run(std::ifstream *s) {
                         //Assume the most simple delete, that the expr represents the common where.
                         std::vector<Where> where_clause_dat;
                         parseWhere(del->expr, where_clause_dat);
-                        executor->deleteRecord(tableName, where_clause_dat);
+                        try{
+                            executor->deleteRecord(tableName, where_clause_dat);
+                        }
+                        catch (db_err_t &db_err){
+                            showErrMsg(db_err);
+                        }
                         break;
 
                     }
@@ -143,7 +217,13 @@ void Interface::run(std::ifstream *s) {
                         }
                         else if(drop->type == hsql::kDropIndex){
                             std::string indexName(drop->indexName);
-//                            executor->dropIndex(indexName);
+                            try{
+                                executor->dropIndex(indexName);
+
+                            }
+                            catch (db_err_t &db_err){
+                                showErrMsg(db_err);
+                            }
                         }
                         break;
                     }
@@ -161,7 +241,12 @@ void Interface::run(std::ifstream *s) {
             }
         }
         else {
-            std::cout << "INVALID QUERY" << std::endl;
+            for (auto character : query){
+                if (character != ' '){
+                    _os << result.errorMsg() << std::endl;
+                    break;
+                }
+            }
         }
         result.reset();
     }

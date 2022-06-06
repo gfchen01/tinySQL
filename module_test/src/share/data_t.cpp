@@ -21,7 +21,7 @@ void Tuple::setDeleted() {
 }
 
 //得到元组中的数据
-std::vector<Data> Tuple::getData() const{
+std::vector<Data>& Tuple::getData(){
     return this->data;
 }
 

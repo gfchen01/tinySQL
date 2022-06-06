@@ -34,6 +34,7 @@ struct record{
     Tuple tuple[1000];
     int record_length;
 };
+
 template <typename T>
 bool judge(T a , T b , Where relation) {
     switch(relation.relation_operator) {
@@ -75,6 +76,7 @@ bool judge(T a , T b , Where relation) {
         };break;
     }
 }
+
 class RecordManager {
 public:
     RecordManager(BufferManager *bfm):_bfm(bfm){}
@@ -120,7 +122,8 @@ public:
      * @param result_table_name 返回的表的名字
      * @return Table 返回表
      */
-    Table SelectRecord(std::string table_name , std::string result_table_name = "tmp_table");
+    std::vector<Tuple> SelectRecord(std::string table_name);
+    std::vector<Tuple> SelectRecord(std::string table_name , std::vector<std::string> target_attr);
     /**
      * @brief 返回包含所有目标属性满足Where条件的记录的表
      *
@@ -130,7 +133,8 @@ public:
      * @param result_table_name 返回的表的名字
      * @return Table 返回表
      */
-    Table SelectRecord(std::string table_name , std::string target_attr , Where where , std::string result_table_name = "tmp_table");
+    std::vector<Tuple> SelectRecord(std::string table_name , Where where);
+    std::vector<Tuple> SelectRecord(std::string table_name , std::vector<std::string> target_attr , Where where);
     /**
      * @brief Create a Index object
      *
@@ -141,13 +145,13 @@ public:
     void CreateIndex(IndexManager& index_manager , std::string table_name , std::string target_attr);
 private:
     //获取文件大小
-    int getBlockNum(std::string table_name);
+    int getBlockNum(std::string &table_name);
     //insertRecord的辅助函数
     int getTupleLength(Tuple tuple);
     //判断插入的记录是否和其他记录冲突
     bool isConflict(std::vector<Tuple>& tuples , std::vector<Data>& v , int index);
     //带索引查找
-    void searchWithIndex(std::string table_name , std::string target_attr , Where where , std::vector<Index_t>& block_ids);
+    void searchWithIndex(std::string &table_name , std::string &target_attr , Where where , std::vector<Index_t>& block_ids);
     //在块中进行条件删除
     int conditionDeleteInBlock(std::string table_name , int block_id , Attribute attr , int index , Where where);
     //在块中进行条件查询

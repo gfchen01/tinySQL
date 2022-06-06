@@ -75,10 +75,21 @@ class BufferManager {
             const char *path = file_name.c_str();
             if (stat(path, &file_state) == -1){
                 std::cout << "File path error" << std::endl;
-                return -1;
+                throw DB_FILE_NOT_FOUND;
             }
             size_t size = file_state.st_size;
             return size;
+        }
+
+        bool isFileExists(std::string path){
+            return std::filesystem::exists(path);
+        }
+
+        void createEmptyFile(std::string path){
+            FILE* f;
+            f = fopen(path.c_str(), "w");
+            if (f == nullptr) throw DB_FAILED;
+            fclose(f);
         }
 
         int getBlockNum(std::string fileName);

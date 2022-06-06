@@ -34,11 +34,6 @@ const std::map<hsql::DataType, BASE_SQL_ValType> type_map
          {hsql::DataType::VARCHAR, BASE_SQL_ValType::STRING},
          {hsql::DataType::DECIMAL, BASE_SQL_ValType::FLOAT}};
 
-enum struct S_ATTRIBUTE
-{Null,
-    PrimaryKey,
-    Unique}; ///< Special attribute types.
-
 /**
  * @brief Basic data element in a tuple.
  *
@@ -129,6 +124,24 @@ struct Data{
     friend bool operator!=(const Data& d_l, const Data& d_r){
         return !(d_l == d_r);
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const Data& data){
+        switch(data.type){
+            case BASE_SQL_ValType::INT:{
+                os << data.data_meta.i_data << ' | ';
+                break;
+            }
+            case BASE_SQL_ValType::FLOAT:{
+                os << data.data_meta.f_data << ' | ';
+                break;
+            }
+            case BASE_SQL_ValType::STRING:{
+                os << data.data_meta.s_data << ' | ';
+                break;
+            }
+        }
+        return os;
+    }
 };
 
 struct Where{
@@ -175,7 +188,7 @@ public:
     Tuple() : isDeleted_(false) {};
     Tuple(const Tuple &tuple);  //拷贝元组
     void addData(Data data);  //新增元组
-    std::vector<Data> getData() const;  //返回数据
+    std::vector<Data> &getData();  //返回数据
     int getSize(){
         return (int)data.size();
     }  //返回元组的数据数量
@@ -199,6 +212,9 @@ public:
     std::vector<Tuple>& getTuple();
     Index getIndex();
     void showTable(std::string table_name);
+    size_t getTupleBytes(){
+        return attr.num * sizeof(Data);
+    }
 };
 
 #endif
