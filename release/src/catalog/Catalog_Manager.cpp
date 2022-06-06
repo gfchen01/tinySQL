@@ -32,8 +32,7 @@ CatalogManager::CatalogManager(BufferManager *bfm):_bfm(bfm){
         }
         ++i;
     }
-    if (i != 0)
-        tableNames.emplace(str_buffer.substr(a + 1, i - a - 1));
+    tableNames.emplace(str_buffer.substr(a + 1, i - a - 1));
 
     _bfm->flushPage(p_Id);
     // buffer save

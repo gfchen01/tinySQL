@@ -1,90 +1,49 @@
+//
+// Created by luke on 22-6-2.
+//
+
+#include "hsql/SQLParser.h"
+#include "catalog/catalog.h"
+#include "API/interface.h"
+#include <ios>
 #include <iostream>
-#include <random>
-#include <vector>
-#include "index/bpTree_block.h"
-#include "index/bpTree_disk.h"
-
-#include <chrono>
-#include <random>
-#include <set>
-
+#include <fstream>
+// #include "hsql/SQLParserResult.h"
 using namespace std;
 
-void createBptreeFile(std::string fileName, BufferManager& bfm){
-    fileName = PATH::INDEX_PATH + fileName;
-    FILE* f = fopen(fileName.c_str(), "w"); // Create the file
-    fclose(f);
+string create_table_query = "CREATE TABLE student "
+                "(id char(8), "
+                "name char(10), "
+                "age int, "
+                "score double, "
+                "primary key (id));";
 
-    pageId_t header_id;
-    char* raw = bfm.getPage(fileName, 0, header_id);
-    bfm.modifyPage(header_id);
-    bpTree_Block* b = reinterpret_cast<bpTree_Block*>(raw);
+string drop_query = "DROP TABLE student;";
 
-    b->init(0, INVALID_BLOCK_ID);
-    bfm.flushPage(header_id, fileName, 0);
-}
+string select_query = "SELECT student.name "
+                      "FROM student "
+                      "WHERE student.name = 'John' "
+                      "and student.age > 30 "
+                      "and student.teacher = 'Cathy';";
 
-int main() 
+string delete_query = "DELETE FROM students WHERE age between 20 and 30;";
+
+string create_index_query = "CREATE INDEX name_id on student(name);";
+
+string insert_query = "INSERT INTO student(id, name, age)"
+                      "VALUES('12789', 'Newman', 20);";
+
+string update_query = "update student set name = 'John' where name = 'Cathy';";
+
+int main()
 {
-    BufferManager bfm;
-    string fileName = "testBptreeFile";
-    createBptreeFile(fileName, bfm);
+//    std::ifstream ifs;
+//    ifs.open("QueryInsert2.txt", std::fstream::in);
 
-    Bp_tree<int, int> bpTree(&bfm);
-    bpTree.InitRoot(fileName);
+//    std::ofstream ofs;
+//    ofs.open("Output.txt", std::fstream::out);
 
-    size_t len = 1e4;
-//    bpTree.Insert(-1, -1);
-//    bpTree.Delete(-1);
-
-    int value;
-    try{
-        bpTree.FindValue(10000, value);
-    }
-    catch (db_err_t& err){
-        cout << err << endl;
-    }
-
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    std::default_random_engine generator (seed);
-    std::uniform_int_distribution<int> distribution(0,len);
-
-    set<int> randKeys;
-
-    for (size_t i = 0; i < len; ++i){
-        int rand_key = distribution(generator);
-        if (randKeys.find(rand_key) != randKeys.end()){
-            continue;
-        }
-//        cout << rand_key << endl;
-        randKeys.insert(rand_key);
-        bpTree.Insert(rand_key, rand_key);
-    }
-
-    for (auto item : randKeys){
-        cout << item << endl;
-    }
-
-    int i = 0;
-    for (auto item : randKeys){
-        int res;
-        if(!bpTree.FindValue(item, res)){
-            cout << "Error, debug" << endl;
-        }
-        try{
-            bpTree.Delete(item);
-        }
-        catch (db_err_t& err){
-            cout << err;
-        }
-        if (bpTree.FindValue(item, res)){
-            cout << "Error, debug2" << endl;
-            bpTree.Delete(item);
-        }
-        ++i;
-    }
-
-    std::cout << "HAHAHA" << std::endl;
-    // cout << sizeof(x1) << "," << sizeof(x2) << ", " << sizeof(x3) << endl;
-    // cout << sizeof(blockId_t);
+    Interface anInterface(std::cin, std::cout);
+    anInterface.run();
+//    ifs.close();
 }

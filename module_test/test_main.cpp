@@ -37,18 +37,13 @@ string update_query = "update student set name = 'John' where name = 'Cathy';";
 
 int main()
 {
-    std::ifstream ifs;
-    ifs.open("QueryInsert2.txt", std::fstream::in);
+//    std::ifstream ifs;
+//    ifs.open("QueryInsert2.txt", std::fstream::in);
 
 //    std::ofstream ofs;
 //    ofs.open("Output.txt", std::fstream::out);
 
-    Interface anInterface(ifs, std::cout);
+    Interface anInterface(std::cin, std::cout);
     anInterface.run();
-    ifs.close();
-
-//    CatalogManager c_manager;
-//    c_manager.CreateTable("Student",)
-
-
+//    ifs.close();
 }

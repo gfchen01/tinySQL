@@ -189,7 +189,7 @@ public:
     Tuple(const Tuple &tuple);  //拷贝元组
     void addData(Data data);  //新增元组
     std::vector<Data> &getData();  //返回数据
-    int getSize(){
+    int getSize() const{
         return (int)data.size();
     }  //返回元组的数据数量
     bool isDeleted();
