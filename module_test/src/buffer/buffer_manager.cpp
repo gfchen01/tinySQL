@@ -105,9 +105,6 @@ BufferManager::BufferManager(int frame_size) {
 BufferManager::~BufferManager() {
     for (int i = 0;i < frame_size_;i++) {
         std::string file_name;
-        int block_id;
-        file_name = Frames[i].getFileName();
-        block_id = Frames[i].getBlockId();
         flushPage(i);
     }
 }
@@ -211,7 +208,7 @@ int BufferManager::loadDiskBlock(int page_id , const std::string& file_name , in
     Frames[page_id].setDirty(false);
     Frames[page_id].setAvaliable(false);
 
-    fname_page_map.emplace(file_name, page_id);
+    fname_page_map.emplace(Frames[page_id].getPageStrId(), page_id);
 
     return 0;
 }
@@ -229,7 +226,7 @@ int BufferManager::flushPage(pageId_t page_id) {
     auto file_path = Frames[page_id].getFileName();
     auto block_id = Frames[page_id].getBlockId();
 
-    auto iter = fname_page_map.find(file_path);
+    auto iter = fname_page_map.find(Frames[page_id].getPageStrId());
     if (iter == fname_page_map.end()) return -1;
 
     // 打开文件
@@ -255,8 +252,8 @@ int BufferManager::flushPage(pageId_t page_id) {
  * @param block_id 块ID
  * @return int 找到返回对应页ID，否则返回-1
  */
-pageId_t BufferManager::getPageId(std::string file_name , int block_id) {
-    auto page_id_iter = fname_page_map.find(file_name);
+pageId_t BufferManager::getPageId(const std::string& file_name , int block_id) {
+    auto page_id_iter = fname_page_map.find(Page::generatePageStrId(file_name, block_id));
     if (page_id_iter != fname_page_map.end()) return page_id_iter->second;
     else return -1;
 }
@@ -267,7 +264,7 @@ pageId_t BufferManager::getPageId(std::string file_name , int block_id) {
  * @param file_name 文件名
  * @return int 块数
  */
-int BufferManager::getBlockNum(std::string file_name){
+int BufferManager::getBlockNum(const std::string& file_name){
     char* p;
     int block_num = -1;
     do {
@@ -313,9 +310,10 @@ pageId_t BufferManager::getEmptyPageId(){
             flushPage(current_position_);
         }
         // 删除页
-        fname_page_map.erase(Frames[current_position_].getFileName());
+        fname_page_map.erase(Frames[current_position_].getPageStrId());
         Frames[current_position_].initialize();
         // 返回页号
         return current_position_;
     }
 }
+

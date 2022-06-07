@@ -272,7 +272,7 @@ std::vector<MemoryTuple> RecordManager::SelectRecord(std::string table_name) {
 
 //TODO : 检查Attribute的存在性.
 std::vector<MemoryTuple> RecordManager::SelectRecord(const std::string& table_name, const std::vector<std::string>& target_attr){
-    std::string table_path = PATH::RECORD_PATH + table_path;
+    std::string table_path = PATH::RECORD_PATH + table_name;
     //record* r = new record;
     //检测表是否存在
     if (!catalog_manager->existTable(table_name)) {
@@ -553,12 +553,12 @@ int RecordManager::getBlockNum(std::string &table_fname) {
 //判断插入的记录是否和其他记录冲突
 // CGF: 加速 and 防止返回的表过大而内存装不下
 bool RecordManager::isConflict(const MemoryTuple & v, const std::string &table_name , int check_index) {
-    std::string table_fname = PATH::RECORD_PATH + table_name;
-    int block_num = getBlockNum(table_fname);
+    std::string table_path = PATH::RECORD_PATH + table_name;
+    int block_num = getBlockNum(table_path);
     //获取表的属性
     for(int i = 0; i < block_num; i++)
     {
-        char* p = buffer_manager->getPage(table_fname , i);
+        char* p = buffer_manager->getPage(table_path , i);
         record_page* r_page = reinterpret_cast<record_page*> (p);
         for(int j = 0; j < r_page->tuple_num; j++)
         {
@@ -655,7 +655,6 @@ void RecordManager::searchWithIndex(std::string &table_name , std::string &targe
             record_ids.push_back(recordID);
         }
     }
-
     else if (where.relation_operator == Operator::GT|| where.relation_operator == Operator::GE) {
         if (where.data.type == BASE_SQL_ValType::INT) {
             tmp_data.type = BASE_SQL_ValType::INT;
