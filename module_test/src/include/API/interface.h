@@ -19,8 +19,8 @@ public:
     }
     void run();
     void showErrMsg(db_err_t &dbErr);
-    void serialOutput(std::vector<DiskTuple> &tuples);
-    void serialOutput(std::vector<DiskTuple> &tuples, std::vector<std::string> &attr_names);
+    void serialOutput(std::vector<MemoryTuple> &tuples);
+    void serialOutput(std::vector<MemoryTuple> &tuples, std::vector<std::string> &attr_names);
 
 private:
     Exec_Engine *executor;

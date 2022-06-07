@@ -27,8 +27,7 @@ void Exec_Engine::deleteRecord(std::string &table_name, std::vector<Where>& wher
     record_manager.DeleteRecord(table_name, wheres);
 }
 
-template<int len>
-void Exec_Engine::selectRecord(std::string &table_name, std::vector<std::string>& attr_names, std::vector<Where>& wheres, std::vector<DiskTuple<len>>& result){
+void Exec_Engine::selectRecord(std::string &table_name, std::vector<std::string>& attr_names, std::vector<Where>& wheres, std::vector<MemoryTuple>& result){
     if(attr_names.empty()){
         if (wheres.empty()){
             result = record_manager.SelectRecord(table_name);
@@ -47,11 +46,10 @@ void Exec_Engine::selectRecord(std::string &table_name, std::vector<std::string>
     }
 }
 
-Attribute&& Exec_Engine::getTableAttributes(const std::string &table_name) {
+Attribute Exec_Engine::getTableAttributes(const std::string &table_name) {
     return catalog_manager.getAttribute(table_name);
 }
 
-template<int len>
-void Exec_Engine::insertRecord(std::string &table_name, DiskTuple<len> &row){
+void Exec_Engine::insertRecord(std::string &table_name, MemoryTuple &row){
     record_manager.InsertRecord(table_name, row);
 }

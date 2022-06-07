@@ -1,4 +1,4 @@
-make all --print-cell-base --no-builtin-variables --no-builtin-rules --question
+make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # GNU Make 4.2.1
 # Built for x86_64-pc-linux-gnu
 # Copyright (C) 1988-2016 Free Software Foundation, Inc.
@@ -6,7 +6,7 @@ make all --print-cell-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make cell base, printed on Mon Jun  6 20:50:27 2022
+# Make data base, printed on Tue Jun  7 20:26:44 2022
 
 # Variables
 
@@ -49,7 +49,7 @@ VSCODE_NLS_CONFIG = {"locale":"en-us","availableLanguages":{},"_languagePackSupp
 # environment
 _ = /usr/share/code/code
 # environment
-JOURNAL_STREAM = 9:109485
+JOURNAL_STREAM = 9:56590
 # environment
 XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
 # makefile
@@ -69,13 +69,13 @@ XDG_DATA_DIRS = /usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/d
 # environment
 ROS_ETC_DIR = /opt/ros/noetic/etc/ros
 # environment
-DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus,guid=ba5747455d5e428cb8dd9a04629db58d
+DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
 ROS_PACKAGE_PATH = /opt/ros/noetic/share
 # environment
-MANAGERPID = 5341
+MANAGERPID = 4230
 # environment
 ROS_PYTHON_VERSION = 3
 # environment
@@ -95,7 +95,9 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/Homurac-msi:@/tmp/.ICE-unix/5977,unix/Homurac-msi:/tmp/.ICE-unix/5977
+GJS_DEBUG_OUTPUT = stderr
+# environment
+SESSION_MANAGER = local/Homurac-msi:@/tmp/.ICE-unix/4519,unix/Homurac-msi:/tmp/.ICE-unix/4519
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
@@ -107,7 +109,7 @@ VSCODE_LOG_STACK = false
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = 336ccbbd66ac4237a17177dfd087645c
+INVOCATION_ID = 0cf3092a937a48c1823c8216b942a5d9
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -115,13 +117,11 @@ CMAKE_PREFIX_PATH = /opt/ros/noetic
 # environment
 LS_COLORS = 
 # environment
-PARENT_WINDOW_ID = x11:6800007
-# environment
 ROS_DISTRO = noetic
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 14056
+GIO_LAUNCHED_DESKTOP_FILE_PID = 6696
 # automatic
 %F = $(notdir $%)
 # environment
@@ -135,7 +135,7 @@ PWD = /home/luke/Documents/DBS_MiniSQL_Code/DBS_2022_/module_test
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 5933
+SSH_AGENT_PID = 4476
 # environment
 PKG_CONFIG_PATH = /opt/ros/noetic/lib/pkgconfig
 # environment
@@ -177,7 +177,7 @@ SHLVL = 0
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-0518e59e-894d-4a5e-a8b4-d3a6b717a67a.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-46f0f27e-30f9-4cb4-b2ed-0f58bf524ac0.sock
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -243,9 +243,9 @@ PAGER = most
 # environment
 LC_ALL = C
 # environment
-DBUS_STARTER_BUS_TYPE = session
-# environment
 QT4_IM_MODULE = fcitx
+# environment
+GJS_DEBUG_TOPICS = JS ERROR;JS LOG
 # automatic
 ^F = $(notdir $^)
 # default
@@ -265,11 +265,9 @@ LC_ADDRESS = zh_CN.UTF-8
 # environment
 LANG = C
 # environment
-VSCODE_PID = 14056
-# environment
-DBUS_STARTER_ADDRESS = unix:path=/run/user/1000/bus,guid=ba5747455d5e428cb8dd9a04629db58d
+VSCODE_PID = 6696
 # variable set hash-table stats:
-# Load=129/1024=13%, Rehash=0, Collisions=20/151=13%
+# Load=128/1024=12%, Rehash=0, Collisions=21/150=14%
 
 # Pattern-specific Variable Values
 
@@ -279,10 +277,10 @@ DBUS_STARTER_ADDRESS = unix:path=/run/user/1000/bus,guid=ba5747455d5e428cb8dd9a0
 
 # . (device 66306, inode 7738826): 10 files, no impossibilities.
 
+# 10 files, no impossibilities in 1 directories.
+
  
 make: *** No rule to make target 'all'.  Stop.
-
-# 10 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -338,6 +336,6 @@ GNUmakefile:
 # strcache performance: lookups = 21 / hit rate = 14%
 # hash-table stats:
 # Load=18/8192=0%, Rehash=0, Collisions=1/21=5%
-# Finished Make cell base on Mon Jun  6 20:50:27 2022
+# Finished Make data base on Tue Jun  7 20:26:44 2022
 
  

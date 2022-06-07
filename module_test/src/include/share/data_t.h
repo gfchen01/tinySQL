@@ -166,7 +166,6 @@ struct Attribute{
     int primary_Key;    ///< -1 not exist, 1-32 exist and the place where the primary key are
 };
 
-// 这个是不是应该交给Index Manager来定义？
 /**
  * @brief Index desciption for a table.
  *
@@ -178,6 +177,14 @@ struct Index{
 };
 
 typedef std::vector<Data> MemoryTuple;
+
+//struct MemoryTuple {
+//    std::vector<Data> dat;
+//
+//    size_t size(){
+//        return dat.size()
+//    }
+//};
 
 /**
  * @brief One row in a table
@@ -195,8 +202,8 @@ struct DiskTuple{
     DiskTuple(DiskTuple&&) = delete;
 
     void serializeFromMemory(const MemoryTuple& in_tuple);
-    MemoryTuple&& deserializeToMemory(const std::vector<int>& pos = {});
-    [[nodiscard]] std::vector<Data> &&getData() const;  //返回数据
+    MemoryTuple deserializeToMemory(const std::vector<int>& pos = {});
+    [[nodiscard]] std::vector<Data> getData() const;  //返回数据
     [[nodiscard]] db_size_t getSize() const{
         return _total_len;
     }  //返回元组的数据数量

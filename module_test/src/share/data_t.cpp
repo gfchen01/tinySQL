@@ -6,7 +6,7 @@ void DiskTuple::serializeFromMemory(const MemoryTuple &in_tuple) {
     memcpy(cell, in_tuple.data(), sizeof(Data) * in_tuple.size());
 }
 
-MemoryTuple&& DiskTuple::deserializeToMemory(const std::vector<int>& pos) {
+MemoryTuple DiskTuple::deserializeToMemory(const std::vector<int>& pos) {
     MemoryTuple inmemory_tuple;
     if (pos.empty()){
         inmemory_tuple.resize(_total_len);
@@ -17,7 +17,7 @@ MemoryTuple&& DiskTuple::deserializeToMemory(const std::vector<int>& pos) {
             inmemory_tuple.emplace_back(cell[p]);
         }
     }
-    return std::move(inmemory_tuple);
+    return inmemory_tuple;
 }
 
 //
@@ -35,12 +35,12 @@ void DiskTuple::setDeleted() {
 }
 
 //得到元组中的数据
-std::vector<Data>&& DiskTuple::getData() const{
+std::vector<Data> DiskTuple::getData() const{
     std::vector<Data> data_vec;
     for(db_size_t i = 0; i< _total_len; ++i){
         data_vec.emplace_back(cell[i]);
     }
-    return std::move(data_vec);
+    return data_vec;
 }
 
 //DiskTuple* TupleFactory::makeTuple(db_size_t tuple_len) {

@@ -289,9 +289,9 @@ Index CatalogManager::getIndex(const std::string& table_name){
     return index_record;
 }
 
-Attribute&& CatalogManager::getAttribute(const std::string& table_name){
+Attribute CatalogManager::getAttribute(const std::string& table_name){
     if(!existTable(table_name)){
-        throw;
+        throw DB_TABLE_NOT_EXIST;
     }
     pageId_t p_id;
     char* buffer = _bfm->getPage(PATH::CATALOG_PATH + table_name,0, p_id);

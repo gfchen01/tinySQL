@@ -73,7 +73,7 @@ public:
 
     /**
      * @brief 
-     * 
+     *
      * @param table_name 通过表的名字來判斷表內的屬性是否存在 
      * @return true 
      * @return false 
@@ -86,7 +86,7 @@ public:
      * @param table_name 通过表的名字來獲取屬性
      * @return Attribute 
      */
-    Attribute &&getAttribute(const std::string& table_name);
+    Attribute getAttribute(const std::string& table_name);
 
     Index getIndex(const std::string& table_name);
 

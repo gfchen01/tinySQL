@@ -37,7 +37,6 @@ void RecordManager::DropTableFile(const std::string& table_name) {
 void RecordManager::InsertRecord(std::string table_name , const MemoryTuple& tuple) {
     std::string tmp_name = table_name;
     table_name = PATH::RECORD_PATH + table_name;
-    // TODO : Change to factory mode
 //    CatalogManager catalog_manager(buffer_manager);
     //检测表是否存在
     if (!catalog_manager->existTable(tmp_name)) {
@@ -81,20 +80,18 @@ void RecordManager::InsertRecord(std::string table_name , const MemoryTuple& tup
     if( p[0] == '\0') // Nothing in the page, i.e., empty file.
     {
         block_id = block_num - 1;
-//        r_page->tuples[r_page->tuple_num - 1] = tuples;
 //        memcpy(r_page->tuples + r_page->tuple_num, tuple, tuple_bytes);
-        r_page->tuples[0].serializeFromMemory(tuple);
-
         r_page->tuple_num = 1;
-        r_page->record_bytes = sizeof(record_page) + r_page->tuples[0].getBytes();
+        r_page->tuple_at(0).serializeFromMemory(tuple);
+        r_page->record_bytes = sizeof(record_page) + r_page->tuple_at(0).getBytes();
         buffer_manager->modifyPage(page_id);
     }
-    else if(r_page->record_bytes + r_page->tuples[0].getBytes() <= PAGESIZE){
+    else if(r_page->record_bytes + r_page->tuple_at(0).getBytes() <= PAGESIZE){
         block_id = block_num - 1;
 //        memcpy(r_page->tuples + r_page->tuple_num, tuple, tuple_bytes);
-        r_page->tuples[r_page->tuple_num].serializeFromMemory(tuple);
         r_page->tuple_num += 1;
-        r_page->record_bytes += r_page->tuples[0].getBytes();
+        r_page->tuple_at(r_page->tuple_num - 1).serializeFromMemory(tuple);
+        r_page->record_bytes += r_page->tuple_at(0).getBytes();
         buffer_manager->modifyPage(page_id);
     }
     else{ // Create a new page
@@ -102,11 +99,9 @@ void RecordManager::InsertRecord(std::string table_name , const MemoryTuple& tup
         pageId_t new_pId;
         p = buffer_manager->getPage(table_name , block_num, new_pId);
         r_page = reinterpret_cast<record_page*> (p);
-
-        r_page->tuples[0].serializeFromMemory(tuple);
-
         r_page->tuple_num = 1;
-        r_page->record_bytes = sizeof(record_page) + r_page->tuples[0].getBytes();
+        r_page->tuple_at(0).serializeFromMemory(tuple);
+        r_page->record_bytes = sizeof(record_page) + r_page->tuple_at(0).getBytes();
 //        memcpy(r_page->tuples + r_page->tuple_num - 1, tuple, tuple_bytes);
         buffer_manager->modifyPage(page_id);
     }
@@ -150,13 +145,13 @@ int RecordManager::DeleteRecord(std::string table_name) {
         r = reinterpret_cast<record_page*> (p);
         for(int k = 0; k < r->record_bytes; k++)
         {
-            r->tuples[i].setDeleted();
+            r->tuple_at(i).setDeleted();
             for(int j = 0; j < attr.num; j++)
             {
                 if(attr.has_index[j]){
                     std::string attr_name = attr.name[j];
                     std::string index_name = catalog_manager->getIndexName(tmp_name, attr_name);
-                    std::vector<Data> d = r->tuples[k].getData();
+                    std::vector<Data> d = r->tuple_at(k).getData();
                     index_manager->DeleteId(index_name , d[j]);
                 }
             }
@@ -268,8 +263,8 @@ std::vector<MemoryTuple> RecordManager::SelectRecord(std::string table_name) {
         record_page* r_page = reinterpret_cast<record_page*> (p);
         for(int j = 0; j < r_page->tuple_num; j++)
         {
-            if(!r_page->tuples[j].isDeleted())
-                result.emplace_back(r_page->tuples[j].deserializeToMemory());
+            if(!r_page->tuple_at(j).isDeleted())
+                result.emplace_back(r_page->tuple_at(j).deserializeToMemory());
         }
     }
     return result;
@@ -311,8 +306,8 @@ std::vector<MemoryTuple> RecordManager::SelectRecord(const std::string& table_na
         record_page* r = reinterpret_cast<record_page*> (p);
         for(int j = 0; j < r->tuple_num; j++)
         {
-            if(!r->tuples[j].isDeleted())
-                result.emplace_back(r->tuples[j].deserializeToMemory(position));
+            if(!r->tuple_at(j).isDeleted())
+                result.emplace_back(r->tuple_at(j).deserializeToMemory(position));
         }
     }
 
@@ -535,8 +530,8 @@ void RecordManager::CreateIndex(std::string table_name , const std::string& targ
         r = reinterpret_cast<record_page*>(p);
         for(int j = 0; j < r->tuple_num; j++)
         {
-            if(!r->tuples[j].isDeleted()){
-                std::vector<Data> v = r->tuples[j].getData();
+            if(!r->tuple_at(j).isDeleted()){
+                std::vector<Data> v = r->tuple_at(j).getData();
                 index_manager->InsertId(index_name , v[index] , i * 1000 + j);
             }
         }
@@ -567,7 +562,7 @@ bool RecordManager::isConflict(const MemoryTuple & v, const std::string &table_n
         record_page* r_page = reinterpret_cast<record_page*> (p);
         for(int j = 0; j < r_page->tuple_num; j++)
         {
-            if(!r_page->tuples[j].isDeleted() && (r_page->tuples[j].cell[check_index] == v.at(check_index))){
+            if(!r_page->tuple_at(j).isDeleted() && (r_page->tuple_at(j).cell[check_index] == v.at(check_index))){
                 return true;
             }
         }
@@ -584,7 +579,7 @@ void RecordManager::DeleteInBlock(std::string table_name , int block_id , const 
     //将当前块写回文件
     for(int i = 0; i < r->tuple_num; i++)
     {
-        std::vector<Data> d = r->tuples[i].getData();
+        std::vector<Data> d = r->tuple_at(i).getData();
         switch(attr.type[index]){
             case BASE_SQL_ValType::INT:{
                 if(judge(d[index].data_meta.i_data, where.data.data_meta.i_data, where) == true){
@@ -593,13 +588,13 @@ void RecordManager::DeleteInBlock(std::string table_name , int block_id , const 
             };break;
             case BASE_SQL_ValType::FLOAT:{
                 if(judge(d[index].data_meta.f_data, where.data.data_meta.f_data, where) == true){
-                    r->tuples[i].setDeleted();
+                    r->tuple_at(i).setDeleted();
                     record_ids.push_back(block_id * 1000 + i);
                 }
             }break;
             default:{
                 if(judge(d[index].data_meta.s_data, where.data.data_meta.s_data, where) == true){
-                    r->tuples[i].setDeleted();
+                    r->tuple_at(i).setDeleted();
                     record_ids.push_back(block_id * 1000 + i);
                 }
             }
@@ -614,9 +609,9 @@ void RecordManager::SelectInBlock(std::string table_name , int block_id , const 
     r = reinterpret_cast<record_page*>(p);
     for(int i = 0; i < r->tuple_num; i++)
     {
-        if(!r->tuples[i].isDeleted())
+        if(!r->tuple_at(i).isDeleted())
         {
-            std::vector<Data> d = r->tuples[i].getData();
+            std::vector<Data> d = r->tuple_at(i).getData();
             switch(attr.type[index]){
                 case BASE_SQL_ValType::INT:{
                     if(judge(d[index].data_meta.i_data, where.data.data_meta.i_data, where) == true){
@@ -696,7 +691,7 @@ int RecordManager::conditionDeleteInBlock(std::string table_name , const std::ve
         int tuple_id = i % 1000;
         char* p = buffer_manager->getPage(table_name , block_id);
         record_page* r = reinterpret_cast<record_page*> (p);
-        r->tuples[tuple_id].setDeleted();
+        r->tuple_at(tuple_id).setDeleted();
         int page_id = buffer_manager->getPageId(table_name , block_id);
         buffer_manager->modifyPage(page_id);
     }
@@ -713,7 +708,7 @@ void RecordManager::conditionSelectInBlock(std::string table_name , const std::v
         int tuple_id = i % 1000;
         char* p = buffer_manager->getPage(table_name , block_id);
         record_page* r = reinterpret_cast<record_page*>(p);
-        v.emplace_back(r->tuples[tuple_id].deserializeToMemory());
+        v.emplace_back(r->tuple_at(tuple_id).deserializeToMemory());
     }
 }
 

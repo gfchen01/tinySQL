@@ -10,6 +10,27 @@
 #include <cassert>
 #include <iomanip>
 
+/**
+ * This sort is actually a filter
+ *
+ * @param attr_names
+ * @param attr
+ */
+void sortAttrNames(std::vector<std::string> &attr_names, Attribute& attr){
+    if (attr_names.empty()) return;
+    std::vector<std::string> sorted;
+    for (int i = 0; i < attr.num; ++i){
+        for (const auto& attr_name : attr_names){
+            if (attr_name == attr.name[i]){
+                sorted.emplace_back(attr_name);
+                break;
+            }
+        }
+        throw DB_COLUMN_NAME_NOT_EXIST; // Don't allow attr_names not in the correct range
+    }
+    attr_names = sorted;
+}
+
 void Interface::parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec){
     // For where clause, if one side is kExprOperator, then the other side has to be kExprOperator
     if (Clause == nullptr) return;
@@ -71,9 +92,11 @@ void Interface::run() {
     hsql::SQLParserResult result;
     const hsql::SQLStatement* statement;
 
-    int i = 0;
-
+    int loop_counter = 0;
     while(true){
+        if (loop_counter++ % 1000 == 0){
+            std::cout << "Critical point" << std::endl;
+        }
         query.clear();
         std::getline(_is, query, ';');
 
@@ -109,10 +132,9 @@ void Interface::run() {
                             showErrMsg(db_err);
                         }
 
-                        int tuple_len = attr_names.empty() ? tableAttr.num : attr_names.size();
+                        sortAttrNames(attr_names, tableAttr);
 
-                        DiskTuple<attr_names.size()> x;
-                        std::vector<DiskTuple<tuple_len>> res; // Result container
+                        std::vector<MemoryTuple> res; // Result container
                         // TODO: Call executor
                         try{
                             executor->selectRecord(tableName, attr_names, where_clauses, res);
@@ -120,7 +142,14 @@ void Interface::run() {
                         catch (db_err_t &db_err){
                             showErrMsg(db_err);
                         }
-                        serialOutput(res);
+//                        executor->selectRecord(tableName, attr_names, where_clauses, res);
+
+                        if (attr_names.empty()) {
+                            for(int i = 0; i < tableAttr.num; ++i){
+                                attr_names.emplace_back(tableAttr.name[i]);
+                            }
+                        }
+                        serialOutput(res, attr_names);
                         break;
                     }
                     case hsql::kStmtCreate :{
@@ -148,13 +177,13 @@ void Interface::run() {
                                     }
                                 }
                             }
-//                            executor->createTable(tableName, attr);
-                            try{
-                                executor->createTable(tableName, attr);
-                            }
-                            catch (db_err_t &db_err){
-                                showErrMsg(db_err);
-                            }
+                            executor->createTable(tableName, attr);
+//                            try{
+//                                executor->createTable(tableName, attr);
+//                            }
+//                            catch (db_err_t &db_err){
+//                                showErrMsg(db_err);
+//                            }
                             break;
                         }
                         else if(create->type == hsql::kCreateIndex){
@@ -163,12 +192,14 @@ void Interface::run() {
                             std::string attrName;
                             for(auto col : *(create->indexColumns)){
                                 attrName = col;
-                                try{
-                                    executor->createIndex(tableName, indexName, attrName);
-                                }
-                                catch (db_err_t &db_err){
-                                    showErrMsg(db_err);
-                                }
+                                executor->createIndex(tableName, indexName, attrName);
+
+//                                try{
+//                                    executor->createIndex(tableName, indexName, attrName);
+//                                }
+//                                catch (db_err_t &db_err){
+//                                    showErrMsg(db_err);
+//                                }
                             }
                         }
                         else{
@@ -182,10 +213,11 @@ void Interface::run() {
                         // TODO : Add feature that a insert can specify the attribute
                         if (insert->select == nullptr){
                             std::string tableName = insert->tableName;
-                            DiskTuple row;
+                            MemoryTuple row;
                             for(auto val : *(insert->values)){
-                                row.cell.emplace_back(val);
+                                row.emplace_back(val);
                             }
+//                            executor->insertRecord(tableName, row);
                             try{
                                 executor->insertRecord(tableName, row);
                             }
@@ -207,13 +239,13 @@ void Interface::run() {
                         //Assume the most simple delete, that the expr represents the common where.
                         std::vector<Where> where_clause_dat;
                         parseWhere(del->expr, where_clause_dat);
-                        try{
-                            executor->deleteRecord(tableName, where_clause_dat);
-                        }
-                        catch (db_err_t &db_err){
-                            showErrMsg(db_err);
-                        }
-//                        executor->deleteRecord(tableName, where_clause_dat);
+//                        try{
+//                            executor->deleteRecord(tableName, where_clause_dat);
+//                        }
+//                        catch (db_err_t &db_err){
+//                            showErrMsg(db_err);
+//                        }
+                        executor->deleteRecord(tableName, where_clause_dat);
                         break;
 
                     }
@@ -245,6 +277,9 @@ void Interface::run() {
 //                        executor->updateRecord(tableName, where_dat);
                         break;
                     }
+                    default :{
+                        _os << ">> Unsupported valid SQL command. May support later.";
+                    }
                 }
             }
             _os << ">> Success." << std::endl;
@@ -262,9 +297,9 @@ void Interface::run() {
 }
 
 
-void Interface::serialOutput(std::vector<DiskTuple> &tuples) {
+void Interface::serialOutput(std::vector<MemoryTuple> &tuples) {
     for (const auto& tuple : tuples){
-        for (auto dat : tuple.cell){
+        for (auto dat : tuple){
             _os << ">> " << dat;
         }
         _os << std::endl;
@@ -272,18 +307,20 @@ void Interface::serialOutput(std::vector<DiskTuple> &tuples) {
     _os.flush();
 }
 
-void Interface::serialOutput(std::vector<DiskTuple> &tuples, std::vector<std::string> &attr_names){
-    for(auto i : attr_names){
+void Interface::serialOutput(std::vector<MemoryTuple> &tuples, std::vector<std::string> &attr_names){
+    for(const auto& i : attr_names){
          _os << std::setw(6) <<"|" << std::setw(12) << i;
     }
     _os<< std::endl;
-    for(auto i: attr_names){
-        _os <<"------------------";
-    }
+//    for(auto i: attr_names){
+//    }
+
+    _os <<"------------------";
+
     _os<<std::endl;
     //
-    for(auto tuple : tuples){
-        for(auto dat : tuple.cell){
+    for(const auto& tuple : tuples){
+        for(auto dat : tuple){
             if(dat.type==(BASE_SQL_ValType::INT)){
                 _os <<std::setw(6)<<"|"<<std::setw(12)<<dat.data_meta.i_data;
             }

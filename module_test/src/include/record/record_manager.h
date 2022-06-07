@@ -35,6 +35,24 @@ struct record_page{
     int tuple_num;
     db_size_t record_bytes;
     DiskTuple tuples[];
+
+    DiskTuple& tuple_at(int offset){
+        if (offset == 0) return tuples[0];
+        else{
+            if (offset >= tuple_num){
+                throw;
+            }
+            else{
+                char* start = (char*)tuples;
+                start = start + offset * tuples[0].getBytes();
+                return *((DiskTuple*)start);
+            }
+        }
+    }
+
+    ///< Safety purpose
+    template<class T>
+    DiskTuple& operator[](T offset) = delete;
 };
 
 
@@ -79,6 +97,7 @@ bool judge(T a , T b , const Where& relation) {
         };break;
     }
 }
+
 std::vector<Index_t> Union(const std::vector<Index_t>& a, const std::vector<Index_t>& b);
 
 /**
