@@ -36,7 +36,7 @@ public:
      * @param index 索引
      * @param primary Primary Key的位置
      */
-    void CreateTable(std::string table_name, Attribute &attr);
+    void CreateTable(const std::string& table_name, Attribute &attr);
 
     /**
      * @brief Update Index
@@ -52,7 +52,7 @@ public:
      * 
      * @param table_name 通过表的名字來刪除表格
      */
-    void DropTable(std::string table_name);
+    void DropTable(const std::string& table_name);
 
     /**
      * @brief 
@@ -60,7 +60,7 @@ public:
      * @param table_name 通过table_name查找該表
      * @param index_name 通过index_name來刪除index
      */
-    void DropIndex(std::string table_name,std::string index_name);
+    void DropIndex(const std::string& table_name,const std::string& index_name);
 
     /**
      * @brief 
@@ -78,7 +78,7 @@ public:
      * @return true 
      * @return false 
      */
-    bool existAttribute(std::string table_name, std::string attr_name);
+    bool existAttribute(const std::string& table_name, const std::string& attr_name);
 
     /**
      * @brief Get the Attribute object
@@ -86,9 +86,9 @@ public:
      * @param table_name 通过表的名字來獲取屬性
      * @return Attribute 
      */
-    Attribute getAttribute(const std::string& table_name);
+    Attribute &&getAttribute(const std::string& table_name);
 
-    Index getIndex(std::string table_name);
+    Index getIndex(const std::string& table_name);
 
     std::string getIndexName(const std::string& table_name, const std::string& attr_name);
 

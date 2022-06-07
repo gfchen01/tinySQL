@@ -101,7 +101,18 @@ void Interface::run() {
                         std::vector<Where> where_clauses;
                         parseWhere(select->whereClause, where_clauses);
 
-                        std::vector<Tuple> res; // Result container
+                        Attribute tableAttr;
+                        try{
+                            tableAttr = executor->getTableAttributes(tableName);
+                        }
+                        catch(db_err_t &db_err){ // Table may not exist
+                            showErrMsg(db_err);
+                        }
+
+                        int tuple_len = attr_names.empty() ? tableAttr.num : attr_names.size();
+
+                        DiskTuple<attr_names.size()> x;
+                        std::vector<DiskTuple<tuple_len>> res; // Result container
                         // TODO: Call executor
                         try{
                             executor->selectRecord(tableName, attr_names, where_clauses, res);
@@ -171,7 +182,7 @@ void Interface::run() {
                         // TODO : Add feature that a insert can specify the attribute
                         if (insert->select == nullptr){
                             std::string tableName = insert->tableName;
-                            Tuple row;
+                            DiskTuple row;
                             for(auto val : *(insert->values)){
                                 row.cell.emplace_back(val);
                             }
@@ -251,7 +262,7 @@ void Interface::run() {
 }
 
 
-void Interface::serialOutput(std::vector<Tuple> &tuples) {
+void Interface::serialOutput(std::vector<DiskTuple> &tuples) {
     for (const auto& tuple : tuples){
         for (auto dat : tuple.cell){
             _os << ">> " << dat;
@@ -261,7 +272,7 @@ void Interface::serialOutput(std::vector<Tuple> &tuples) {
     _os.flush();
 }
 
-void Interface::serialOutput(std::vector<Tuple> &tuples, std::vector<std::string> &attr_names){
+void Interface::serialOutput(std::vector<DiskTuple> &tuples, std::vector<std::string> &attr_names){
     for(auto i : attr_names){
          _os << std::setw(6) <<"|" << std::setw(12) << i;
     }

@@ -34,7 +34,7 @@
 struct record_page{
     int tuple_num;
     db_size_t record_bytes;
-    Tuple tuple[];
+    DiskTuple tuples[];
 };
 
 
@@ -106,7 +106,7 @@ public:
      * @param table_name 表的名字
      * @param tuple 元组
      */
-    void InsertRecord(std::string table_name , const Tuple* tuple);
+    void InsertRecord(std::string table_name , const MemoryTuple& tuple);
     /**
      * @brief 删除对应表中所有记录（不删除表文件）
      *
@@ -131,8 +131,8 @@ public:
      * @param result_table_name 返回的表的名字
      * @return Table 返回表
      */
-    std::vector<Tuple> SelectRecord(std::string table_name);
-    std::vector<Tuple> SelectRecord(std::string table_name , const std::vector<std::string>& target_attr);
+    std::vector<MemoryTuple> SelectRecord(std::string table_name);
+    std::vector<MemoryTuple> SelectRecord(const std::string& table_path , const std::vector<std::string>& target_attr);
     /**
      * @brief 返回包含所有目标属性满足Where条件的记录的表
      *
@@ -142,8 +142,8 @@ public:
      * @param result_table_name 返回的表的名字
      * @return Table 返回表
      */
-    std::vector<Tuple> SelectRecord(std::string table_path , std::vector<Where> where);
-    std::vector<Tuple> SelectRecord(std::string table_name , const std::vector<std::string>& target_attr , std::vector<Where> where);
+    std::vector<MemoryTuple> SelectRecord(std::string table_path , std::vector<Where> where);
+    std::vector<MemoryTuple> SelectRecord(std::string table_name , const std::vector<std::string>& target_attr , std::vector<Where> where);
     /**
      * @brief Create a Index on an attribute that has already exists
      *
@@ -157,16 +157,16 @@ private:
     //获取文件大小
     static int getBlockNum(std::string &table_name);
     //insertRecord的辅助函数
-//    static int getTupleLength(Tuple tuple);
+//    static int getTupleLength(DiskTuple tuples);
     //判断插入的记录是否和其他记录冲突
-    static bool isConflict(std::vector<Tuple>& tuples , std::vector<Data>& v , int index);
+    bool isConflict(const MemoryTuple &v, const std::string& tableName, int check_index);
     //带索引查找
     void searchWithIndex(std::string &table_name , std::string &target_attr , const Where& where , std::vector<Index_t>& record_ids);
     //在块中进行条件删除
     int conditionDeleteInBlock(std::string table_name , const std::vector<Index_t>& record_id);
     void DeleteInBlock(std::string table_name , int block_id , const Attribute& attr , int index , Where where, std::vector<Index_t>& record_ids);
     //在块中进行条件查询
-    void conditionSelectInBlock(std::string table_name , const std::vector<Index_t>& record_id , std::vector<Tuple>& v);
+    void conditionSelectInBlock(std::string table_name , const std::vector<Index_t>& record_id , std::vector<MemoryTuple>& v);
     void SelectInBlock(std::string table_name , int block_id , const Attribute& attr , int index , Where where , std::vector<Index_t>& record_ids);
     BufferManager *buffer_manager;
     CatalogManager *catalog_manager;

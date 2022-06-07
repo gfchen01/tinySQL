@@ -37,7 +37,7 @@ const std::map<hsql::DataType, BASE_SQL_ValType> type_map
          {hsql::DataType::DECIMAL, BASE_SQL_ValType::FLOAT}};
 
 /**
- * @brief Basic cell element in a tuple.
+ * @brief Basic cell element in a tuples.
  *
  * types: int:-1 float:0 string:1-255
  */
@@ -177,53 +177,44 @@ struct Index{
     std::string index_name[10];  ///< has_index name
 };
 
+typedef std::vector<Data> MemoryTuple;
+
 /**
  * @brief One row in a table
  *
- * Tuple is a row in a table.
+ * DiskTuple is a row in a table.
  */
-template<int len>
-class Tuple{
-public:
-    db_size_t _total_len = len;
-    db_size_t _current_len = 0;
-    bool isDeleted_ = false;
-    Data cell[len];
-public:
-    Tuple(){};
-    explicit Tuple(std::vector<Data> &dat_vec);
-//    Tuple(const Tuple &tuple);  //拷贝元组
-    void addData(Data &dat);  //新增元组
+struct DiskTuple{
+    db_size_t _total_len;
+//    db_size_t _current_len;
+    bool isDeleted_;
+    Data cell[];
+
+    DiskTuple()= delete;
+    DiskTuple(DiskTuple&) = delete;
+    DiskTuple(DiskTuple&&) = delete;
+
+    void serializeFromMemory(const MemoryTuple& in_tuple);
+    MemoryTuple&& deserializeToMemory(const std::vector<int>& pos = {});
     [[nodiscard]] std::vector<Data> &&getData() const;  //返回数据
     [[nodiscard]] db_size_t getSize() const{
         return _total_len;
     }  //返回元组的数据数量
     [[nodiscard]] db_size_t getBytes() const{
-        return sizeof(Tuple) + sizeof(Data) * _total_len;
+        return sizeof(DiskTuple) + sizeof(Data) * _total_len;
     }
+//    DiskTuple<len>& operator=(DiskTuple t);
     bool isDeleted();
     void setDeleted();
 };
 
-
-//class Table{
-//private:
-//    std::string table_name;
-//    std::vector<Tuple> tuple;
-//    Index has_index;
+//
+//class TupleFactory{
 //public:
-//    Attribute attr;
-//    Table(){};
-//    Table(std::string table_name, Attribute attr);
-//    Table(const Table &table);
-//    std::string getTableName();
-//    Attribute getAttr();
-//    std::vector<Tuple>& getTuple();
-//    Index getIndex();
-//    void showTable(std::string table_name);
-//    size_t getTupleBytes(){
-//        return attr.num * sizeof(Data);
-//    }
+//    static DiskTuple* makeTuple(db_size_t tuple_len);
+//    static DiskTuple* makeTuple(DiskTuple *t);
+//    static DiskTuple* makeTuple(std::vector<Data> &dat_vec);
 //};
+
 
 #endif

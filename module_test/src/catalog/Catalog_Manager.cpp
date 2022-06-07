@@ -67,10 +67,8 @@ bool CatalogManager::existTable(const std::string& table_name){
     return (iter != tableNames.end());
 }
 
-bool CatalogManager::existAttribute(std::string table_name, std::string attr_name){
-    int pageID;
-    char* buffer = _bfm->getPage(PATH::CATALOG_PATH + table_name, 0);
-    std::string str_buffer = buffer;
+bool CatalogManager::existAttribute(const std::string& table_name, const std::string& attr_name){
+
     Attribute attr = getAttribute(table_name);
     for (int i = 0; i<attr.num; i++){
         if(attr_name == attr.name[i])
@@ -111,7 +109,7 @@ void CatalogManager::rewriteAttribute(const std::string &table_name, const Attri
     strcpy(buffer,str.c_str());
 }
 
-void CatalogManager::CreateTable(std::string table_name, Attribute &attr){
+void CatalogManager::CreateTable(const std::string& table_name, Attribute &attr){
     Index index;
     if(attr.primary_Key >= 0){
         index.number = 1;
@@ -161,7 +159,7 @@ void CatalogManager::CreateTable(std::string table_name, Attribute &attr){
     strcpy(buffer,str.c_str());
 }
 
-void CatalogManager::DropTable(std::string table_name){
+void CatalogManager::DropTable(const std::string& table_name){
     if(!existTable(table_name)){
         throw;
     }
@@ -212,7 +210,7 @@ void CatalogManager::UpdateIndex(const std::string& table_name, const std::strin
      */
 }
 
-void CatalogManager::DropIndex(std::string table_name, std::string index_name){
+void CatalogManager::DropIndex(const std::string& table_name, const std::string& index_name){
     Index index_record = getIndex(table_name);
     Attribute attr = getAttribute(table_name);
     if(!existTable(table_name)){
@@ -241,8 +239,8 @@ void CatalogManager::DropIndex(std::string table_name, std::string index_name){
 //    CreateTable(table_name, attr);
 }
 
-Index CatalogManager::getIndex(std::string table_name){
-    if(existTable(table_name) == false){
+Index CatalogManager::getIndex(const std::string& table_name){
+    if(!existTable(table_name)){
         throw;
     }
     char* buffer = _bfm->getPage(PATH::CATALOG_PATH + table_name,0);
@@ -291,7 +289,7 @@ Index CatalogManager::getIndex(std::string table_name){
     return index_record;
 }
 
-Attribute CatalogManager::getAttribute(const std::string& table_name){
+Attribute&& CatalogManager::getAttribute(const std::string& table_name){
     if(!existTable(table_name)){
         throw;
     }
@@ -340,8 +338,6 @@ Attribute CatalogManager::getAttribute(const std::string& table_name){
             attr_record.is_unique[i] = false;
 
         attr_info.erase(0, current+1);
-//        auto temp = attr_info.substr(current+1);
-//        attr_info = temp;
     }
 
     // primary key info
@@ -358,7 +354,7 @@ Attribute CatalogManager::getAttribute(const std::string& table_name){
 
     _bfm->unpinPage(p_id);
 
-    return attr_record;
+    return std::move(attr_record);
 }
 
 std::string CatalogManager::Index2Attr(const std::string& table_name, const std::string& attr_name, const std::string& index_name){
