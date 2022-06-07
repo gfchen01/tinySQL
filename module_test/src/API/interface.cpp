@@ -8,6 +8,7 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
+#include <iomanip>
 
 void Interface::parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec){
     // For where clause, if one side is kExprOperator, then the other side has to be kExprOperator
@@ -50,7 +51,7 @@ void Interface::showErrMsg(db_err_t &dbErr) {
 
         }
         case DB_INDEX_ALREADY_EXIST:{
-            _os << "Index already exist on given attribute or index name already exist\n";
+            _os << "Index already exist on given attribute or has_index name already exist\n";
             break;
 
         }
@@ -63,16 +64,6 @@ void Interface::showErrMsg(db_err_t &dbErr) {
             _os << "DB ERROR!\n";
         }
     }
-}
-
-void Interface::serialOutput(std::vector<Tuple> &tuples) {
-    for (auto tuple : tuples){
-        for (auto dat : tuple.data){
-            _os << ">> " << dat;
-        }
-        _os << std::endl;
-    }
-    _os.flush();
 }
 
 void Interface::run() {
@@ -97,7 +88,7 @@ void Interface::run() {
                 statement = result.getStatement(k);
                 switch (statement->type()) {
                     case hsql::kStmtSelect:{
-                        const auto* select = static_cast<const hsql::SelectStatement*>(statement);
+                        const auto* select = dynamic_cast<const hsql::SelectStatement*>(statement);
 
                         std::string tableName = select->fromTable->getName();
 
@@ -122,7 +113,7 @@ void Interface::run() {
                         break;
                     }
                     case hsql::kStmtCreate :{
-                        const auto* create = static_cast<const hsql::CreateStatement*>(statement);
+                        const auto* create = dynamic_cast<const hsql::CreateStatement*>(statement);
                         if (create->type == hsql::kCreateTable){ // Only handle create table
                             std::string tableName = create->tableName;
                             Attribute attr;
@@ -140,7 +131,7 @@ void Interface::run() {
                                     if (cons->type == hsql::ConstraintType::PrimaryKey){
                                         if (attr.name[j] == std::string(cons->columnNames->at(0))){
                                             attr.primary_Key = j;
-                                            attr.unique[j] = true;
+                                            attr.is_unique[j] = true;
                                             break;
                                         }
                                     }
@@ -170,19 +161,19 @@ void Interface::run() {
                             }
                         }
                         else{
-                            std::cout << "Invalid operation" << std::endl;
+                            _os << "Invalid operation" << std::endl;
                         }
                         break;
 
                     }
                     case hsql::kStmtInsert :{
-                        const auto* insert = static_cast<const hsql::InsertStatement*>(statement);
+                        const auto* insert = dynamic_cast<const hsql::InsertStatement*>(statement);
                         // TODO : Add feature that a insert can specify the attribute
                         if (insert->select == nullptr){
                             std::string tableName = insert->tableName;
                             Tuple row;
                             for(auto val : *(insert->values)){
-                                row.data.emplace_back(val);
+                                row.cell.emplace_back(val);
                             }
                             try{
                                 executor->insertRecord(tableName, row);
@@ -200,7 +191,7 @@ void Interface::run() {
 
                     }
                     case hsql::kStmtDelete :{
-                        const auto* del = static_cast<const hsql::DeleteStatement*>(statement);
+                        const auto* del = dynamic_cast<const hsql::DeleteStatement*>(statement);
                         std::string tableName = del->tableName;
                         //Assume the most simple delete, that the expr represents the common where.
                         std::vector<Where> where_clause_dat;
@@ -216,7 +207,7 @@ void Interface::run() {
 
                     }
                     case hsql::kStmtDrop :{
-                        const auto* drop = static_cast<const hsql::DropStatement*>(statement);
+                        const auto* drop = dynamic_cast<const hsql::DropStatement*>(statement);
                         if (drop->type == hsql::kDropTable){
                             std::string tableName(drop->name);
                             executor->dropTable(tableName);
@@ -234,7 +225,7 @@ void Interface::run() {
                         break;
                     }
                     case hsql::kStmtUpdate :{
-                        const auto* update = static_cast<const hsql::UpdateStatement*>(statement);
+                        const auto* update = dynamic_cast<const hsql::UpdateStatement*>(statement);
                         std::string tableName = update->table->name;
 
                         std::vector<Where> where_dat;
@@ -256,5 +247,41 @@ void Interface::run() {
             }
         }
         result.reset();
+    }
+}
+
+
+void Interface::serialOutput(std::vector<Tuple> &tuples) {
+    for (const auto& tuple : tuples){
+        for (auto dat : tuple.cell){
+            _os << ">> " << dat;
+        }
+        _os << std::endl;
+    }
+    _os.flush();
+}
+
+void Interface::serialOutput(std::vector<Tuple> &tuples, std::vector<std::string> &attr_names){
+    for(auto i : attr_names){
+         _os << std::setw(6) <<"|" << std::setw(12) << i;
+    }
+    _os<< std::endl;
+    for(auto i: attr_names){
+        _os <<"------------------";
+    }
+    _os<<std::endl;
+    //
+    for(auto tuple : tuples){
+        for(auto dat : tuple.cell){
+            if(dat.type==(BASE_SQL_ValType::INT)){
+                _os <<std::setw(6)<<"|"<<std::setw(12)<<dat.data_meta.i_data;
+            }
+            else if(dat.type==BASE_SQL_ValType::FLOAT){
+                _os <<std::setw(6)<<"|"<<std::setw(12)<<dat.data_meta.f_data;
+            }
+            else
+                _os <<std::setw(6)<<"|"<<std::setw(12)<<dat.data_meta.s_data;
+        }
+        _os<<std::endl;
     }
 }

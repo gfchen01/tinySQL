@@ -119,7 +119,7 @@ private:
     std::map<std::string, std::string> indexName2tableName;
 
     /**
-     * @brief Rewrite the attribute and index information of a table
+     * @brief Rewrite the attribute and has_index information of a table
      * @param table_name
      * @param attr
      * @param index

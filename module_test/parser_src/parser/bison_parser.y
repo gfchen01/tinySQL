@@ -93,7 +93,7 @@
 %parse-param { yyscan_t scanner }
 
 /*********************************
- ** Define all data-types (http://www.gnu.org/software/bison/manual/html_node/Union-Decl.html)
+ ** Define all cell-types (http://www.gnu.org/software/bison/manual/html_node/Union-Decl.html)
  *********************************/
 %union {
   // clang-format on

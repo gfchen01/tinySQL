@@ -34,7 +34,7 @@ void RecordManager::DropTableFile(const std::string& table_name) {
 //异常：如果元组类型不匹配，抛出tuple_type_conflict异常。如果
 //主键冲突，抛出primary_key_conflict异常。如果unique属性冲突，
 //抛出unique_conflict异常。如果表不存在，抛出table_not_exist异常。
-void RecordManager::InsertRecord(std::string table_name , Tuple& tuple) {
+void RecordManager::InsertRecord(std::string table_name , const Tuple *tuple) {
     std::string tmp_name = table_name;
     table_name = PATH::RECORD_PATH + table_name;
     // TODO : Change to factory mode
@@ -44,7 +44,7 @@ void RecordManager::InsertRecord(std::string table_name , Tuple& tuple) {
         throw DB_TABLE_NOT_EXIST;
     }
     Attribute attr = catalog_manager->getAttribute(tmp_name);
-    std::vector<Data> v = tuple.getData();
+    std::vector<Data> v = tuple->getData();
     //检测插入的元组的各个属性是否合法
     for (int i = 0;i < v.size();i++) {
         if (v[i].type != attr.type[i])
@@ -58,7 +58,7 @@ void RecordManager::InsertRecord(std::string table_name , Tuple& tuple) {
     }
     //检测是否存在unique冲突
     for (int i = 0;i < attr.num;i++) {
-        if (attr.unique[i]) {
+        if (attr.is_unique[i]) {
             if (isConflict(tuples , v , i))
                 throw DB_UNIQUE_CONFLICT;
         }
@@ -66,55 +66,59 @@ void RecordManager::InsertRecord(std::string table_name , Tuple& tuple) {
 
     //异常检测完成
 
-
     int block_num = getBlockNum(table_name);
-    //处理表文件大小为0的特殊情况
-    if (block_num <= 0)
-        block_num = 1;
+//    //处理表文件大小为0的特殊情况
+//    if (block_num <= 0)
+//        block_num = 1;
+
     //获取表的最后一块的句柄
-    char* p = buffer_manager->getPage(table_name , block_num - 1);
-    record* r;
+    pageId_t page_id;
+    char* p = buffer_manager->getPage(table_name , block_num - 1, page_id);
+    record_page* r_page;
     int block_id;
-    r = reinterpret_cast<record*> (p);
-    if( p[0] == '\0')
+    r_page = reinterpret_cast<record_page*> (p);
+    const db_size_t tuple_bytes = tuple->getBytes();
+    if( p[0] == '\0') // Nothing in the page, i.e., empty file.
     {
         block_id = block_num - 1;
-        r->tuple_num = 1;
-        r->tuple[r->tuple_num - 1] = tuple;
-        r->record_length += 2 * sizeof(int) + getTupleLength(tuple);
-        int page_id = buffer_manager->getPageId(table_name , block_num - 1);
+        r_page->tuple_num = 0;
+        r_page->record_bytes = 0;
+//        r_page->tuple[r_page->tuple_num - 1] = tuple;
+        memcpy(r_page->tuple + r_page->tuple_num, tuple, tuple_bytes);
+
+        r_page->tuple_num += 1;
+        r_page->record_bytes += sizeof(record_page) + tuple_bytes;
         buffer_manager->modifyPage(page_id);
     }
-    else if(r->record_length + getTupleLength(tuple) <= PAGESIZE){
+    else if(r_page->record_bytes + tuple->getBytes() <= PAGESIZE){
         block_id = block_num - 1;
-        r->tuple_num++;
-        r->tuple[r->tuple_num - 1] = tuple;
-        r->record_length += getTupleLength(tuple);
-        int page_id = buffer_manager->getPageId(table_name , block_num - 1);
+        memcpy(r_page->tuple + r_page->tuple_num, tuple, tuple_bytes);
+
+        r_page->tuple_num += 1;
+        r_page->record_bytes += tuple_bytes;
         buffer_manager->modifyPage(page_id);
     }
-    else{
+    else{ // Create a new page
         block_id = block_num;
-        p = buffer_manager->getPage(table_name , block_num);
-        r = reinterpret_cast<record*> (p);
-        r->tuple_num = 1;
-        r->tuple[r->tuple_num - 1] = tuple;
-        r->record_length += 2 * sizeof(int) + getTupleLength(tuple);
-        int page_id = buffer_manager->getPageId(table_name , block_num);
+        pageId_t new_pId;
+        p = buffer_manager->getPage(table_name , block_num, new_pId);
+        r_page = reinterpret_cast<record_page*> (p);
+        r_page->tuple_num = 1;
+        r_page->record_bytes = sizeof(record_page) + tuple_bytes;
+        memcpy(r_page->tuple + r_page->tuple_num - 1, tuple, tuple_bytes);
         buffer_manager->modifyPage(page_id);
     }
 
     for(int i = 0; i < attr.num; i++)
     {
-        if(attr.index[i] == true)
+        if(attr.has_index[i])
         {
             std::string attr_name = attr.name[i];
             std::string index_name = catalog_manager->getIndexName(tmp_name, attr_name);
-            std::vector<Data> &d = tuple.getData();
-            index_manager->InsertId(index_name , d[i] , block_id * 1000 + r->tuple_num - 1);
+            std::vector<Data> d = tuple->getData();
+            index_manager->InsertId(index_name , d[i] , block_id * 1000 + r_page->tuple_num - 1);
         }
     }
-
 }
 
 // 输入：表名
@@ -140,14 +144,14 @@ int RecordManager::DeleteRecord(std::string table_name) {
     //遍历所有块
     for (int i = 0;i < block_num;i++) {
         char* p = buffer_manager->getPage(table_name , i);
-        record* r;
-        r = reinterpret_cast<record*> (p);
-        for(int k = 0; k < r->record_length; k++)
+        record_page* r;
+        r = reinterpret_cast<record_page*> (p);
+        for(int k = 0; k < r->record_bytes; k++)
         {
             r->tuple[i].setDeleted();
             for(int j = 0; j < attr.num; j++)
             {
-                if(attr.index[j]){
+                if(attr.has_index[j]){
                     std::string attr_name = attr.name[j];
                     std::string index_name = catalog_manager->getIndexName(tmp_name, attr_name);
                     std::vector<Data> d = r->tuple[k].getData();
@@ -185,7 +189,7 @@ int RecordManager::DeleteRecord(std::string table_name , std::vector<Where> wher
         for (int i = 0;i < attr.num;i++) {
             if (attr.name[i] == where[j].attr_name) {
                 index = i;
-                if (attr.index[i] == true)
+                if (attr.has_index[i])
                     flag = true;
                 break;
             }
@@ -202,7 +206,7 @@ int RecordManager::DeleteRecord(std::string table_name , std::vector<Where> wher
         //异常处理完成
 
         if(j == 0){
-            if (flag == true && where[j].relation_operator != Operator::NE) {
+            if (flag && where[j].relation_operator != Operator::NE) {
                 //通过索引获取满足条件的记录所在的块号
                 searchWithIndex(table_name , where[j].attr_name , where[j] , result_record_id);
             }
@@ -219,7 +223,7 @@ int RecordManager::DeleteRecord(std::string table_name , std::vector<Where> wher
         }
         else{
             std::vector<Index_t> tmp_record_id;
-            if (flag == true && where[j].relation_operator != Operator::NE) {
+            if (flag && where[j].relation_operator != Operator::NE) {
                 //通过索引获取满足条件的记录所在的块号
                 searchWithIndex(table_name , where[j].attr_name , where[j] , tmp_record_id);
             }
@@ -236,8 +240,6 @@ int RecordManager::DeleteRecord(std::string table_name , std::vector<Where> wher
             result_record_id = Union(result_record_id, tmp_record_id);
             tmp_record_id.resize(0);
         }
-
-
     }
     return conditionDeleteInBlock(table_name, result_record_id);
 }
@@ -264,7 +266,7 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name) {
     {
         char* p = buffer_manager->getPage(table_name , i);
 
-        record* r = reinterpret_cast<record*> (p);
+        record_page* r = reinterpret_cast<record_page*> (p);
         for(int j = 0; j < r->tuple_num; j++)
         {
             if(!r->tuple[j].isDeleted())
@@ -274,7 +276,7 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name) {
     return result;
 }
 
-std::vector<Tuple> RecordManager::SelectRecord(std::string table_name, std::vector<std::string> target_attr){
+std::vector<Tuple> RecordManager::SelectRecord(std::string table_name, const std::vector<std::string>& target_attr){
     std::string tmp_name = table_name;
     table_name = PATH::RECORD_PATH + table_name;
     //record* r = new record;
@@ -293,7 +295,7 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name, std::vect
     {
         char* p = buffer_manager->getPage(table_name , i);
 
-        record* r = reinterpret_cast<record*> (p);
+        record_page* r = reinterpret_cast<record_page*> (p);
         for(int j = 0; j < r->tuple_num; j++)
         {
             if(!r->tuple[j].isDeleted())
@@ -315,7 +317,7 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name, std::vect
     std::vector<Data> tmp{};
     for(auto & i : v)
     {
-        Tuple tmp_tuple;
+        Tuple tmp_tuple(target_attr.size());
         for(int j : position)
         {
             std::vector<Data> tmp_data{};
@@ -339,8 +341,7 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , std::vec
     }
     Attribute attr = catalog_manager->getAttribute(table_name);
     int index = -1;
-    bool flag = false;
-    IndexManager index_manager(buffer_manager);
+    bool exist_index = false;
     std::vector<Tuple> result;
     std::vector<Index_t> result_record_id;
     for(int j = 0; j < where.size(); j++)
@@ -348,8 +349,8 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , std::vec
         for (int i = 0;i < attr.num;i++) {
             if (attr.name[i] == where[j].attr_name) {
                 index = i;
-                if (attr.index[i] == true)
-                    flag = true;
+                if (attr.has_index[i])
+                    exist_index = true;
                 break;
             }
         }
@@ -360,11 +361,12 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , std::vec
         else if (attr.type[index] != where[j].data.type) {
             throw DB_TYPE_ERR;
         }
-        Tuple tmp_tuple;
+        // Return tuple length should equal attribute number of the table.
+        Tuple tmp_tuple(attr.num);
         std::vector<Tuple> tmp_tuples;
         std::vector<Index_t> tmp_record_id;
         if(j == 0){
-            if (flag == true && where[j].relation_operator != Operator::NE) {
+            if (exist_index && where[j].relation_operator != Operator::NE) {
                 std::vector<Index_t> record_ids;
                 //使用索引获取满足条件的记录所在块号
                 searchWithIndex(table_name , where[j].attr_name , where[j] , result_record_id);
@@ -381,7 +383,7 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , std::vec
             }
         }
         else{
-            if (flag == true && where[j].relation_operator != Operator::NE) {
+            if (exist_index && where[j].relation_operator != Operator::NE) {
                 std::vector<Index_t> record_ids;
                 //使用索引获取满足条件的记录所在块号
                 searchWithIndex(table_name , where[j].attr_name , where[j] , tmp_record_id);
@@ -403,6 +405,7 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , std::vec
     conditionSelectInBlock(table_name , result_record_id, result);
     return result;
 }
+
 std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , const std::vector<std::string>& target_attr , std::vector<Where> where) {
     std::string tmp_name = table_name;
     table_name = PATH::RECORD_PATH + table_name;
@@ -413,16 +416,15 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , const st
     Attribute attr = catalog_manager->getAttribute(tmp_name);
     int index = -1;
     bool flag = false;
-    IndexManager index_manager(buffer_manager);
+
     std::vector<Tuple> v;
-    std::vector<Tuple> result;
     std::vector<Index_t> result_record_id;
     for(int j = 0; j < where.size(); j++)
     {
         for (int i = 0;i < attr.num;i++) {
             if (attr.name[i] == where[j].attr_name) {
                 index = i;
-                if (attr.index[i] == true)
+                if (attr.has_index[i])
                     flag = true;
                 break;
             }
@@ -434,11 +436,9 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , const st
         else if (attr.type[index] != where[j].data.type) {
             throw DB_TYPE_ERR;
         }
-        Tuple tmp_tuple;
-        std::vector<Tuple> tmp_tuples;
         std::vector<Index_t> tmp_record_id;
         if(j == 0){
-            if (flag == true && where[j].relation_operator != Operator::NE) {
+            if (flag && where[j].relation_operator != Operator::NE) {
                 std::vector<Index_t> record_ids;
                 //使用索引获取满足条件的记录所在块号
                 searchWithIndex(tmp_name , where[j].attr_name , where[j] , result_record_id);
@@ -455,7 +455,7 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , const st
             }
         }
         else{
-            if (flag == true && where[j].relation_operator != Operator::NE) {
+            if (flag && where[j].relation_operator != Operator::NE) {
                 std::vector<Index_t> record_ids;
                 //使用索引获取满足条件的记录所在块号
                 searchWithIndex(tmp_name , where[j].attr_name , where[j] , tmp_record_id);
@@ -486,26 +486,26 @@ std::vector<Tuple> RecordManager::SelectRecord(std::string table_name , const st
             }
         }
     }
-//    std::vector<Tuple> result{};
+    std::vector<Tuple> result;
     std::vector<Data> tmp{};
     for(auto & i : v)
     {
-        Tuple tmp_Tuple;
-        for(int j = 0; j < position.size(); j++)
+        Tuple tmp_Tuple(target_attr.size());
+        for(int j : position)
         {
-            std::vector<Data>& tmp_data = i.getData();
-            tmp_Tuple.addData(tmp_data[position[j]]);
+            std::vector<Data> tmp_data = i.getData();
+            tmp_Tuple.addData(tmp_data[j]);
         }
         result.push_back(tmp_Tuple);
     }
-    return result;
 
+    return result;
 }
 //输入：表名，目标属性名
 //输出：void
 //功能：对表中已经存在的记录建立索引
 //异常：如果表不存在，抛出table_not_exist异常。如果属性不存在，抛出attribute_not_exist异常。
-void RecordManager::CreateIndex(std::string table_name , std::string target_attr) {
+void RecordManager::CreateIndex(std::string table_name , const std::string& target_attr) {
     std::string tmp_name = table_name;
     table_name = PATH::RECORD_PATH + table_name;
     //检测表是否存在
@@ -537,11 +537,11 @@ void RecordManager::CreateIndex(std::string table_name , std::string target_attr
     //获取表的属性
     std::string index_name = catalog_manager->getIndexName(tmp_name, target_attr);
     //遍历所有块
-    record* r;
+    record_page* r;
     for(int i = 0; i < block_num; i++)
     {
         char* p = buffer_manager->getPage(table_name , i);
-        r = reinterpret_cast<record*>(p);
+        r = reinterpret_cast<record_page*>(p);
         for(int j = 0; j < r->tuple_num; j++)
         {
             if(!r->tuple[j].isDeleted()){
@@ -555,14 +555,14 @@ void RecordManager::CreateIndex(std::string table_name , std::string target_attr
 //获取文件大小
 int RecordManager::getBlockNum(std::string &table_fname) {
     size_t f_size = BufferManager::getFileSize(table_fname);
-    int block_num = (f_size + BLOCKSIZE - 1) / BLOCKSIZE;
+    int block_num = (int)((f_size + BLOCKSIZE - 1) / BLOCKSIZE) + 1;
     return block_num;
 }
 
-int RecordManager::getTupleLength(Tuple tuple)
-{
-    return (int)(sizeof(Data) * tuple.getSize() + sizeof(bool));
-}
+//int RecordManager::getTupleLength(Tuple tuple)
+//{
+//    return (int)(sizeof(Data) * tuple.getSize() + sizeof(bool));
+//}
 
 //判断插入的记录是否和其他记录冲突
 bool RecordManager::isConflict(std::vector<Tuple>& tuples , std::vector<Data>& v , int index) {
@@ -588,12 +588,12 @@ bool RecordManager::isConflict(std::vector<Tuple>& tuples , std::vector<Data>& v
     return false;
 }
 
-void RecordManager::DeleteInBlock(std::string table_name , int block_id , Attribute attr , int index , Where where, std::vector<Index_t>& record_ids){
+void RecordManager::DeleteInBlock(std::string table_name , int block_id , const Attribute& attr , int index , Where where, std::vector<Index_t>& record_ids){
     //获取当前块的句柄
     table_name = PATH::RECORD_PATH + table_name;//新增
     char* p = buffer_manager->getPage(table_name , block_id);
-    record* r;
-    r = reinterpret_cast<record*> (p);
+    record_page* r;
+    r = reinterpret_cast<record_page*> (p);
     //将当前块写回文件
     for(int i = 0; i < r->tuple_num; i++)
     {
@@ -619,14 +619,15 @@ void RecordManager::DeleteInBlock(std::string table_name , int block_id , Attrib
         }
     }
 }
-void RecordManager::SelectInBlock(std::string table_name , int block_id , Attribute attr , int index , Where where , std::vector<Index_t>& record_ids){
+
+void RecordManager::SelectInBlock(std::string table_name , int block_id , const Attribute& attr , int index , Where where , std::vector<Index_t>& record_ids){
     table_name = PATH::RECORD_PATH + table_name;//新增
     char* p = buffer_manager->getPage(table_name , block_id);
-    record* r;
-    r = reinterpret_cast<record*>(p);
+    record_page* r;
+    r = reinterpret_cast<record_page*>(p);
     for(int i = 0; i < r->tuple_num; i++)
     {
-        if(r->tuple[i].isDeleted() == false)
+        if(!r->tuple[i].isDeleted())
         {
             std::vector<Data> d = r->tuple[i].getData();
             switch(attr.type[index]){
@@ -649,7 +650,7 @@ void RecordManager::SelectInBlock(std::string table_name , int block_id , Attrib
         }
     }
 }
-void RecordManager::searchWithIndex(std::string &table_name , std::string &target_attr , Where where , std::vector<Index_t>& record_ids) {
+void RecordManager::searchWithIndex(std::string &table_name , std::string &target_attr , const Where& where , std::vector<Index_t>& record_ids) {
     Data tmp_data;
     Index_t recordID;
     std::string index_name = catalog_manager->getIndexName(table_name, target_attr);
@@ -680,7 +681,7 @@ void RecordManager::searchWithIndex(std::string &table_name , std::string &targe
         }
         else if (where.data.type == BASE_SQL_ValType::FLOAT) {
             tmp_data.type = BASE_SQL_ValType::FLOAT;
-            tmp_data.data_meta.i_data = INF;
+            tmp_data.data_meta.f_data = INF;
         }
         else {
             tmp_data.type = BASE_SQL_ValType::STRING;
@@ -699,7 +700,7 @@ void RecordManager::searchWithIndex(std::string &table_name , std::string &targe
 }
 
 //在块中进行条件删除
-int RecordManager::conditionDeleteInBlock(std::string table_name , std::vector<Index_t> record_id) {
+int RecordManager::conditionDeleteInBlock(std::string table_name , const std::vector<Index_t>& record_id) {
     //获取当前块的句柄
     table_name = PATH::RECORD_PATH + table_name;//新增
     for(unsigned int i : record_id)
@@ -707,16 +708,17 @@ int RecordManager::conditionDeleteInBlock(std::string table_name , std::vector<I
         int block_id = i / 1000;
         int tuple_id = i % 1000;
         char* p = buffer_manager->getPage(table_name , block_id);
-        record* r = reinterpret_cast<record*> (p);
+        record_page* r = reinterpret_cast<record_page*> (p);
         r->tuple[tuple_id].setDeleted();
         int page_id = buffer_manager->getPageId(table_name , block_id);
         buffer_manager->modifyPage(page_id);
     }
-    return record_id.size();
+    return (int)record_id.size();
 }
 
 //在块中进行条件查询
-void RecordManager::conditionSelectInBlock(std::string table_name , std::vector<Index_t> record_id , std::vector<Tuple>& v)
+template<int tuple_len>
+void RecordManager::conditionSelectInBlock(std::string table_name , const std::vector<Index_t>& record_id , std::vector<Tuple<tuple_len>>& v)
 {
     table_name = PATH::RECORD_PATH + table_name;
     for(unsigned int i : record_id)
@@ -724,7 +726,7 @@ void RecordManager::conditionSelectInBlock(std::string table_name , std::vector<
         int block_id = i / 1000;
         int tuple_id = i % 1000;
         char* p = buffer_manager->getPage(table_name , block_id);
-        record* r = reinterpret_cast<record*>(p);
+        record_page* r = reinterpret_cast<record_page*>(p);
         v.push_back(r->tuple[tuple_id]);
     }
 }

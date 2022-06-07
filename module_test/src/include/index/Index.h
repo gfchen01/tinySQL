@@ -14,10 +14,10 @@ public:
 
     /**
      * @brief Create an Index of an attr.
-     * Actually creates an index file with a head block.
+     * Actually creates an has_index file with a head block.
      * File name convention: ${INDEX_PATH}/{table name}_{attribute name}
      *
-     * @param indexName the name of index as a string.
+     * @param indexName the name of has_index as a string.
      * @throw DB_FILE_NOT_FOUND
      */
     void CreateIndex(const std::string& indexName);
@@ -33,9 +33,9 @@ public:
     void DropIndex(const std::string& indexName);
 
     /**
-     * @brief Update the pointer of a record in the index file.
+     * @brief Update the pointer of a record in the has_index file.
      *
-     * @param indexName Name of index.
+     * @param indexName Name of has_index.
      * @param key Key of the record.
      * @param rec_ptr Pointer of the record.
      * @throw DB_KEY_NOT_FOUND If key doesn't exist
@@ -45,7 +45,7 @@ public:
     void UpdateKey(const std::string &indexName, const Data &key, const Data &new_key);
 
     /**
-     * @brief Delete an index of a certain key.
+     * @brief Delete an has_index of a certain key.
      * 
      * @param tableName the name of table (file) as a string.
      * @param key the key that user wish to delete
@@ -54,10 +54,10 @@ public:
     void DeleteId(const std::string& indexName, const Data &key);
 
     /**
-     * @brief Find the Index based on the key (data)
+     * @brief Find the Index based on the key (cell)
      * 
      * @param tableName 
-     * @param key[in] The data to search for, as a key.
+     * @param key[in] The cell to search for, as a key.
      * @param result[out] The container for result
      * @throw DB_KEY_NOT_FOUND
      */
@@ -66,13 +66,13 @@ public:
     bool FindId(const std::string& indexName, const Data &lower_key, const Data &upper_key, std::vector<Index_t>& result);
 
     /**
-     * @brief Insert a key into the index table
+     * @brief Insert a key into the has_index table
      * The user should make sure that the file exists. Or he should use TRY!
      *
      * @param tableName
      * @param attr[in] the attribute of the Key that user wish to insert on
-     * @param key The key of the data. Here simply insert the value of the data itself.
-     * @param rec_ptr record pointer. The protocal index of a sinlge record.
+     * @param key The key of the cell. Here simply insert the value of the cell itself.
+     * @param rec_ptr record pointer. The protocal has_index of a sinlge record.
      * @throw DB_KEY_NOT_FOUND
      */
     void InsertId(const std::string& indexName, const Data &Key, const Index_t &rec_ptr);

@@ -103,8 +103,8 @@ public:
 
 private:
     blockId_t _root_id = INVALID_BLOCK_ID;
-    std::string _index_fname; ///< The full name of the index file name.
-    db_size_t _file_block_count; ///< The block number of the index file.
+    std::string _index_fname; ///< The full name of the has_index file name.
+    db_size_t _file_block_count; ///< The block number of the has_index file.
 //    BP_TREE_BLOCK_T* header_ptr;
 //    pageId_t header_pageId; ///< The header page id in the buffer pool. The page is pinned.
 
@@ -412,7 +412,7 @@ bool BP_TREE_T::Insert_in_Leaf(const key_t &key, const value_t &val, BP_TREE_LEA
     db_size_t pos = leaf->leaf_biSearch(key);
 
     // TODO : Change this to throw
-    // Only allow unique key
+    // Only allow is_unique key
     if (leaf->_size > 0 && leaf->_k_rowid_pair[pos].first == key) return false;
 
     // Insert the key-val pair. The space should be pre-allocated at the initialization of node pages.

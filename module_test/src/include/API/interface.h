@@ -20,6 +20,7 @@ public:
     void run();
     void showErrMsg(db_err_t &dbErr);
     void serialOutput(std::vector<Tuple> &tuples);
+    void serialOutput(std::vector<Tuple> &tuples, std::vector<std::string> &attr_names);
 
 private:
     Exec_Engine *executor;

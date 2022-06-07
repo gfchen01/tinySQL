@@ -1,4 +1,4 @@
-make all --print-data-base --no-builtin-variables --no-builtin-rules --question
+make all --print-cell-base --no-builtin-variables --no-builtin-rules --question
 # GNU Make 4.2.1
 # Built for x86_64-pc-linux-gnu
 # Copyright (C) 1988-2016 Free Software Foundation, Inc.
@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Mon Jun  6 20:50:27 2022
+# Make cell base, printed on Mon Jun  6 20:50:27 2022
 
 # Variables
 
@@ -338,6 +338,6 @@ GNUmakefile:
 # strcache performance: lookups = 21 / hit rate = 14%
 # hash-table stats:
 # Load=18/8192=0%, Rehash=0, Collisions=1/21=5%
-# Finished Make data base on Mon Jun  6 20:50:27 2022
+# Finished Make cell base on Mon Jun  6 20:50:27 2022
 
  

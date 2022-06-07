@@ -38,7 +38,7 @@ CatalogManager::CatalogManager(BufferManager *bfm):_bfm(bfm){
     _bfm->flushPage(p_Id);
     // buffer save
 
-    //map table -> index
+    //map table -> has_index
     for(const auto& name : tableNames){
         auto index_cat = getIndex(name);
         for (size_t j = 0; j < index_cat.number; ++j){
@@ -93,7 +93,7 @@ void CatalogManager::rewriteAttribute(const std::string &table_name, const Attri
     std::string attr_index_info_str;
     attr_index_info_str = std::to_string(attr.num);
     for (int i=0; i<attr.num; i++){
-        attr_index_info_str += " " + std::to_string((int)attr.type[i]) + " " + attr.name[i] + " " + std::to_string(attr.unique[i]);
+        attr_index_info_str += " " + std::to_string((int)attr.type[i]) + " " + attr.name[i] + " " + std::to_string(attr.is_unique[i]);
     }
     attr_index_info_str += "#" + std::to_string(attr.primary_Key);
 
@@ -118,9 +118,9 @@ void CatalogManager::CreateTable(std::string table_name, Attribute &attr){
         index.index_name[0] = table_name + "_" + attr.name[attr.primary_Key];
         index.location[0] = attr.primary_Key;
 
-        attr.index[attr.primary_Key] = true;
+        attr.has_index[attr.primary_Key] = true;
 
-        // Create the index for primary key
+        // Create the has_index for primary key
         // TODO : Switch to factory mode
         IndexManager id_manager(_bfm);
         id_manager.CreateIndex(index.index_name[0]);
@@ -148,7 +148,7 @@ void CatalogManager::CreateTable(std::string table_name, Attribute &attr){
     str = "@" + table_name;
     str = str + "%" + std::to_string(attr.num);
     for (int i=0; i<attr.num; i++){
-        str += " " + std::to_string((int)attr.type[i]) + " " + attr.name[i] + " " + std::to_string(attr.unique[i]);
+        str += " " + std::to_string((int)attr.type[i]) + " " + attr.name[i] + " " + std::to_string(attr.is_unique[i]);
     }
     str = str + "#" + std::to_string(attr.primary_Key);
     //Index info
@@ -195,7 +195,7 @@ void CatalogManager::UpdateIndex(const std::string& table_name, const std::strin
         if(attr_name == attr.name[i]){
             //新的index在attribute的那个位置
             index_record.location[index_record.number] = i;
-            attr.index[i] = true;
+            attr.has_index[i] = true;
         }
     }
     ++index_record.number;
@@ -335,9 +335,9 @@ Attribute CatalogManager::getAttribute(const std::string& table_name){
             ++current;
         }
         if(attr_info.substr(0,current) == "1")
-            attr_record.unique[i] = true;
+            attr_record.is_unique[i] = true;
         else
-            attr_record.unique[i] = false;
+            attr_record.is_unique[i] = false;
 
         attr_info.erase(0, current+1);
 //        auto temp = attr_info.substr(current+1);
@@ -351,12 +351,10 @@ Attribute CatalogManager::getAttribute(const std::string& table_name){
     }
     attr_record.primary_Key = atoi(attr_info.substr(0,current).c_str());
 
-    // index info
+    // has_index info
     Index index_record = getIndex(table_name);
-    for(int i = 0; i < attr_record.num;i++)
-        attr_record.index[i]=false;
     for(int i=0; i<index_record.number; i++)
-        attr_record.index[index_record.location[i]]=true;
+        attr_record.has_index[index_record.location[i]] = true;
 
     _bfm->unpinPage(p_id);
 
@@ -407,7 +405,7 @@ void CatalogManager::ShowTable(const std::string& table_name){
         }
         std::cout<<"Attr_type"<<attr_type<<std::endl;
         std::cout<<"Attr_name:"<<attr_record.name[i]<<std::endl;
-        std::cout<<"Attr_unique"<<attr_record.unique[i]<<std::endl;
+        std::cout << "Attr_unique" << attr_record.is_unique[i] << std::endl;
         if(i == attr_record.primary_Key){
             std::cout<<"Primary Key"<<std::endl;
         }

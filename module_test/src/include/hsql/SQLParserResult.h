@@ -48,10 +48,10 @@ class SQLParserResult {
   // SQLParserResult takes ownership of the statement.
   void addStatement(SQLStatement* stmt);
 
-  // Gets the SQL statement with the given index.
+  // Gets the SQL statement with the given has_index.
   const SQLStatement* getStatement(size_t index) const;
 
-  // Gets the non const SQL statement with the given index.
+  // Gets the non const SQL statement with the given has_index.
   SQLStatement* getMutableStatement(size_t index);
 
   // Get the list of all statements.
@@ -61,7 +61,7 @@ class SQLParserResult {
   // Removes them from this result.
   std::vector<SQLStatement*> releaseStatements();
 
-  // Deletes all statements and other data within the result.
+  // Deletes all statements and other cell within the result.
   void reset();
 
   // Does NOT take ownership.
