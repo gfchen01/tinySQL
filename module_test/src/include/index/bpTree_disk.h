@@ -222,7 +222,7 @@ bool BP_TREE_T::FindValue(const key_t &key, value_t &result) const {
     pageId_t p_Id;
     BP_TREE_LEAF_T* n = FindNode(key, p_Id);
 
-    if (n == nullptr) throw DB_KEY_NOT_FOUND;
+    if (n == nullptr) throw DB_INDEX_NOT_FOUND;
 
     db_size_t pos = n->leaf_biSearch(key);
     result = n->_k_rowid_pair[pos].second;

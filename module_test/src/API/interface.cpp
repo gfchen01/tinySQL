@@ -81,8 +81,11 @@ void Interface::showErrMsg(db_err_t &dbErr) {
             break;
 
         }
+        case DB_PRIMARY_KEY_CONFLICT:{
+            _os << "DB PRIMARY CONFLICT!\n";
+        }
         default:{
-            _os << "DB ERROR!\n";
+            _os << "DB ERROR\n";
         }
     }
 }
@@ -294,6 +297,7 @@ void Interface::run() {
         }
         result.reset();
     }
+    _os << "Execute: " << loop_counter << " queries." << std::endl;
 }
 
 
@@ -332,4 +336,5 @@ void Interface::serialOutput(std::vector<MemoryTuple> &tuples, std::vector<std::
         }
         _os<<std::endl;
     }
+    _os << "    Output " << tuples.size() << " records." << std::endl;
 }

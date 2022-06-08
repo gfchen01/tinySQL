@@ -52,6 +52,22 @@ void IndexManager::UpdateKey(const std::string &indexName, const Data &key, cons
     _index_tree.UpdateKey(key, new_key); // May throw here
 }
 
+bool IndexManager::CheckExistance(const std::string &indexName, const Data &key, Index_t &id) {
+    std::string fileName = PATH::INDEX_PATH + indexName;
+    if (_index_tree.getName() != fileName){
+        _index_tree.InitRoot(fileName); // TODO : Flush all pages when init.
+    }
+    bool exists = false;
+    try {
+        exists = _index_tree.FindValue(key, id);
+    }
+    catch(db_err_t& db_err){
+        if (db_err == DB_INDEX_NOT_FOUND) exists = false; // When the index file is empty
+        else throw db_err;
+    }
+    return exists;
+}
+
 bool IndexManager::FindId(const std::string &indexName, const Data &key, Index_t &result) {
     std::string fileName = PATH::INDEX_PATH + indexName;
     if (_index_tree.getName() != fileName){

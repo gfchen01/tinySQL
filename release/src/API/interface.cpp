@@ -8,6 +8,28 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
+#include <iomanip>
+
+/**
+ * This sort is actually a filter
+ *
+ * @param attr_names
+ * @param attr
+ */
+void sortAttrNames(std::vector<std::string> &attr_names, Attribute& attr){
+    if (attr_names.empty()) return;
+    std::vector<std::string> sorted;
+    for (int i = 0; i < attr.num; ++i){
+        for (const auto& attr_name : attr_names){
+            if (attr_name == attr.name[i]){
+                sorted.emplace_back(attr_name);
+                break;
+            }
+        }
+        throw DB_COLUMN_NAME_NOT_EXIST; // Don't allow attr_names not in the correct range
+    }
+    attr_names = sorted;
+}
 
 void Interface::parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec){
     // For where clause, if one side is kExprOperator, then the other side has to be kExprOperator
@@ -50,7 +72,7 @@ void Interface::showErrMsg(db_err_t &dbErr) {
 
         }
         case DB_INDEX_ALREADY_EXIST:{
-            _os << "Index already exist on given attribute or index name already exist\n";
+            _os << "Index already exist on given attribute or has_index name already exist\n";
             break;
 
         }
@@ -59,20 +81,13 @@ void Interface::showErrMsg(db_err_t &dbErr) {
             break;
 
         }
+        case DB_PRIMARY_KEY_CONFLICT:{
+            _os << "DB PRIMARY CONFLICT!\n";
+        }
         default:{
-            _os << "DB ERROR!\n";
+            _os << "DB ERROR\n";
         }
     }
-}
-
-void Interface::serialOutput(std::vector<Tuple> &tuples) {
-    for (auto tuple : tuples){
-        for (auto dat : tuple.data){
-            _os << ">> " << dat;
-        }
-        _os << std::endl;
-    }
-    _os.flush();
 }
 
 void Interface::run() {
@@ -80,9 +95,11 @@ void Interface::run() {
     hsql::SQLParserResult result;
     const hsql::SQLStatement* statement;
 
-    int i = 0;
-
+    int loop_counter = 0;
     while(true){
+        if (loop_counter++ % 1000 == 0){
+            std::cout << "Critical point" << std::endl;
+        }
         query.clear();
         std::getline(_is, query, ';');
 
@@ -97,7 +114,7 @@ void Interface::run() {
                 statement = result.getStatement(k);
                 switch (statement->type()) {
                     case hsql::kStmtSelect:{
-                        const auto* select = static_cast<const hsql::SelectStatement*>(statement);
+                        const auto* select = dynamic_cast<const hsql::SelectStatement*>(statement);
 
                         std::string tableName = select->fromTable->getName();
 
@@ -110,7 +127,17 @@ void Interface::run() {
                         std::vector<Where> where_clauses;
                         parseWhere(select->whereClause, where_clauses);
 
-                        std::vector<Tuple> res; // Result container
+                        Attribute tableAttr;
+                        try{
+                            tableAttr = executor->getTableAttributes(tableName);
+                        }
+                        catch(db_err_t &db_err){ // Table may not exist
+                            showErrMsg(db_err);
+                        }
+
+                        sortAttrNames(attr_names, tableAttr);
+
+                        std::vector<MemoryTuple> res; // Result container
                         // TODO: Call executor
                         try{
                             executor->selectRecord(tableName, attr_names, where_clauses, res);
@@ -118,11 +145,18 @@ void Interface::run() {
                         catch (db_err_t &db_err){
                             showErrMsg(db_err);
                         }
-                        serialOutput(res);
+//                        executor->selectRecord(tableName, attr_names, where_clauses, res);
+
+                        if (attr_names.empty()) {
+                            for(int i = 0; i < tableAttr.num; ++i){
+                                attr_names.emplace_back(tableAttr.name[i]);
+                            }
+                        }
+                        serialOutput(res, attr_names);
                         break;
                     }
                     case hsql::kStmtCreate :{
-                        const auto* create = static_cast<const hsql::CreateStatement*>(statement);
+                        const auto* create = dynamic_cast<const hsql::CreateStatement*>(statement);
                         if (create->type == hsql::kCreateTable){ // Only handle create table
                             std::string tableName = create->tableName;
                             Attribute attr;
@@ -140,19 +174,19 @@ void Interface::run() {
                                     if (cons->type == hsql::ConstraintType::PrimaryKey){
                                         if (attr.name[j] == std::string(cons->columnNames->at(0))){
                                             attr.primary_Key = j;
-                                            attr.unique[j] = true;
+                                            attr.is_unique[j] = true;
                                             break;
                                         }
                                     }
                                 }
                             }
-//                            executor->createTable(tableName, attr);
-                            try{
-                                executor->createTable(tableName, attr);
-                            }
-                            catch (db_err_t &db_err){
-                                showErrMsg(db_err);
-                            }
+                            executor->createTable(tableName, attr);
+//                            try{
+//                                executor->createTable(tableName, attr);
+//                            }
+//                            catch (db_err_t &db_err){
+//                                showErrMsg(db_err);
+//                            }
                             break;
                         }
                         else if(create->type == hsql::kCreateIndex){
@@ -161,29 +195,32 @@ void Interface::run() {
                             std::string attrName;
                             for(auto col : *(create->indexColumns)){
                                 attrName = col;
-                                try{
-                                    executor->createIndex(tableName, indexName, attrName);
-                                }
-                                catch (db_err_t &db_err){
-                                    showErrMsg(db_err);
-                                }
+                                executor->createIndex(tableName, indexName, attrName);
+
+//                                try{
+//                                    executor->createIndex(tableName, indexName, attrName);
+//                                }
+//                                catch (db_err_t &db_err){
+//                                    showErrMsg(db_err);
+//                                }
                             }
                         }
                         else{
-                            std::cout << "Invalid operation" << std::endl;
+                            _os << "Invalid operation" << std::endl;
                         }
                         break;
 
                     }
                     case hsql::kStmtInsert :{
-                        const auto* insert = static_cast<const hsql::InsertStatement*>(statement);
+                        const auto* insert = dynamic_cast<const hsql::InsertStatement*>(statement);
                         // TODO : Add feature that a insert can specify the attribute
                         if (insert->select == nullptr){
                             std::string tableName = insert->tableName;
-                            Tuple row;
+                            MemoryTuple row;
                             for(auto val : *(insert->values)){
-                                row.data.emplace_back(val);
+                                row.emplace_back(val);
                             }
+//                            executor->insertRecord(tableName, row);
                             try{
                                 executor->insertRecord(tableName, row);
                             }
@@ -200,23 +237,23 @@ void Interface::run() {
 
                     }
                     case hsql::kStmtDelete :{
-                        const auto* del = static_cast<const hsql::DeleteStatement*>(statement);
+                        const auto* del = dynamic_cast<const hsql::DeleteStatement*>(statement);
                         std::string tableName = del->tableName;
                         //Assume the most simple delete, that the expr represents the common where.
                         std::vector<Where> where_clause_dat;
                         parseWhere(del->expr, where_clause_dat);
-                        try{
-                            executor->deleteRecord(tableName, where_clause_dat);
-                        }
-                        catch (db_err_t &db_err){
-                            showErrMsg(db_err);
-                        }
-//                        executor->deleteRecord(tableName, where_clause_dat);
+//                        try{
+//                            executor->deleteRecord(tableName, where_clause_dat);
+//                        }
+//                        catch (db_err_t &db_err){
+//                            showErrMsg(db_err);
+//                        }
+                        executor->deleteRecord(tableName, where_clause_dat);
                         break;
 
                     }
                     case hsql::kStmtDrop :{
-                        const auto* drop = static_cast<const hsql::DropStatement*>(statement);
+                        const auto* drop = dynamic_cast<const hsql::DropStatement*>(statement);
                         if (drop->type == hsql::kDropTable){
                             std::string tableName(drop->name);
                             executor->dropTable(tableName);
@@ -234,7 +271,7 @@ void Interface::run() {
                         break;
                     }
                     case hsql::kStmtUpdate :{
-                        const auto* update = static_cast<const hsql::UpdateStatement*>(statement);
+                        const auto* update = dynamic_cast<const hsql::UpdateStatement*>(statement);
                         std::string tableName = update->table->name;
 
                         std::vector<Where> where_dat;
@@ -242,6 +279,9 @@ void Interface::run() {
                         //TODO : Add update content
 //                        executor->updateRecord(tableName, where_dat);
                         break;
+                    }
+                    default :{
+                        _os << ">> Unsupported valid SQL command. May support later.";
                     }
                 }
             }
@@ -257,4 +297,44 @@ void Interface::run() {
         }
         result.reset();
     }
+    _os << "Execute: " << loop_counter << " queries." << std::endl;
+}
+
+
+void Interface::serialOutput(std::vector<MemoryTuple> &tuples) {
+    for (const auto& tuple : tuples){
+        for (auto dat : tuple){
+            _os << ">> " << dat;
+        }
+        _os << std::endl;
+    }
+    _os.flush();
+}
+
+void Interface::serialOutput(std::vector<MemoryTuple> &tuples, std::vector<std::string> &attr_names){
+    for(const auto& i : attr_names){
+         _os << std::setw(6) <<"|" << std::setw(12) << i;
+    }
+    _os<< std::endl;
+//    for(auto i: attr_names){
+//    }
+
+    _os <<"------------------";
+
+    _os<<std::endl;
+    //
+    for(const auto& tuple : tuples){
+        for(auto dat : tuple){
+            if(dat.type==(BASE_SQL_ValType::INT)){
+                _os <<std::setw(6)<<"|"<<std::setw(12)<<dat.data_meta.i_data;
+            }
+            else if(dat.type==BASE_SQL_ValType::FLOAT){
+                _os <<std::setw(6)<<"|"<<std::setw(12)<<dat.data_meta.f_data;
+            }
+            else
+                _os <<std::setw(6)<<"|"<<std::setw(12)<<dat.data_meta.s_data;
+        }
+        _os<<std::endl;
+    }
+    _os << "    Output " << tuples.size() << " records." << std::endl;
 }

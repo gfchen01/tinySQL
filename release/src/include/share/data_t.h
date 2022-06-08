@@ -5,8 +5,10 @@
 #include <map>
 #include <vector>
 #include <cstring>
+#include <cassert>
 
 #include "share/err_type.h"
+#include "share/config.h"
 #include "hsql/SQLParser.h"
 
 enum struct Operator {
@@ -24,7 +26,7 @@ const std::map<hsql::OperatorType, Operator> op_map
 enum struct BASE_SQL_ValType
 {INT,
     FLOAT,
-    STRING}; ///< MiniSQL supported data types.
+    STRING}; ///< MiniSQL supported cell types.
 
 const std::map<hsql::DataType, BASE_SQL_ValType> type_map
         {{hsql::DataType::INT, BASE_SQL_ValType::INT},
@@ -35,7 +37,7 @@ const std::map<hsql::DataType, BASE_SQL_ValType> type_map
          {hsql::DataType::DECIMAL, BASE_SQL_ValType::FLOAT}};
 
 /**
- * @brief Basic data element in a tuple.
+ * @brief Basic cell element in a tuples.
  *
  * types: int:-1 float:0 string:1-255
  */
@@ -45,11 +47,11 @@ struct Data{
         int i_data;
         float f_data;
         char s_data[20];
-    } data_meta;
+    } data_meta{};
 
-    Data(){}
+    Data(){};
 
-    Data(hsql::Expr* expr){
+    explicit Data(hsql::Expr* expr){
         switch (expr->type) {
             case hsql::kExprLiteralInt :{
                 type = BASE_SQL_ValType::INT;
@@ -159,12 +161,11 @@ struct Attribute{
     int num;         ///< number of property
     BASE_SQL_ValType type[32];
     std::string name[32];    ///< property name
-    bool unique[32] = {false};    ///<  uniqure or not
-    bool index[32] = {false};     ///< index exist or not
+    bool is_unique[32] = {false};    ///<  uniqure or not
+    bool has_index[32] = {false};     ///< index exist or not
     int primary_Key;    ///< -1 not exist, 1-32 exist and the place where the primary key are
 };
 
-// 这个是不是应该交给Index Manager来定义？
 /**
  * @brief Index desciption for a table.
  *
@@ -172,49 +173,55 @@ struct Attribute{
 struct Index{
     int number;             ///< number of indexes
     int location[10];     ///< where it is in Attribute
-    std::string index_name[10];  ///< index name
+    std::string index_name[10];  ///< has_index name
 };
+
+typedef std::vector<Data> MemoryTuple;
+
+//struct MemoryTuple {
+//    std::vector<Data> dat;
+//
+//    size_t size(){
+//        return dat.size()
+//    }
+//};
 
 /**
  * @brief One row in a table
  *
- * Tuple is a row in a table.
+ * DiskTuple is a row in a table.
  */
-class Tuple{
-public:
-    std::vector<Data> data;
+struct DiskTuple{
+    db_size_t _total_len;
+//    db_size_t _current_len;
     bool isDeleted_;
-public:
-    Tuple() : isDeleted_(false) {};
-    Tuple(const Tuple &tuple);  //拷贝元组
-    void addData(Data data);  //新增元组
-    std::vector<Data> &getData();  //返回数据
-    int getSize() const{
-        return (int)data.size();
+    Data cell[];
+
+    DiskTuple()= delete;
+    DiskTuple(DiskTuple&) = delete;
+    DiskTuple(DiskTuple&&) = delete;
+
+    void serializeFromMemory(const MemoryTuple& in_tuple);
+    MemoryTuple deserializeToMemory(const std::vector<int>& pos = {});
+    [[nodiscard]] std::vector<Data> getData() const;  //返回数据
+    [[nodiscard]] db_size_t getSize() const{
+        return _total_len;
     }  //返回元组的数据数量
+    [[nodiscard]] db_size_t getBytes() const{
+        return sizeof(DiskTuple) + sizeof(Data) * _total_len;
+    }
+//    DiskTuple<len>& operator=(DiskTuple t);
     bool isDeleted();
     void setDeleted();
 };
 
+//
+//class TupleFactory{
+//public:
+//    static DiskTuple* makeTuple(db_size_t tuple_len);
+//    static DiskTuple* makeTuple(DiskTuple *t);
+//    static DiskTuple* makeTuple(std::vector<Data> &dat_vec);
+//};
 
-class Table{
-private:
-    std::string table_name;
-    std::vector<Tuple> tuple;
-    Index index;
-public:
-    Attribute attr;
-    Table(){};
-    Table(std::string table_name, Attribute attr);
-    Table(const Table &table);
-    std::string getTableName();
-    Attribute getAttr();
-    std::vector<Tuple>& getTuple();
-    Index getIndex();
-    void showTable(std::string table_name);
-    size_t getTupleBytes(){
-        return attr.num * sizeof(Data);
-    }
-};
 
 #endif

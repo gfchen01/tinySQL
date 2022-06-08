@@ -342,7 +342,7 @@ typedef unsigned int flex_uint32_t;
 #define YY_NULL 0
 
 /* Promotes a possibly negative, possibly signed char to an
- *   integer in range [0..255] for use as an array index.
+ *   integer in range [0..255] for use as an array has_index.
  */
 #define YY_SC_TO_UI(c) ((YY_CHAR) (c))
 
@@ -2547,7 +2547,7 @@ struct yyguts_t
 
     /* The rest are the same as the globals declared in the non-reentrant scanner. */
     FILE *yyin_r, *yyout_r;
-    size_t yy_buffer_stack_top; /**< index of top of stack. */
+    size_t yy_buffer_stack_top; /**< has_index of top of stack. */
     size_t yy_buffer_stack_max; /**< capacity of stack. */
     YY_BUFFER_STATE * yy_buffer_stack; /**< Stack as an array. */
     char yy_hold_char;
@@ -3946,7 +3946,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 			}
 		}
 
-	/* Try to read more data. */
+	/* Try to read more cell. */
 
 	/* First move last chars to start of buffer. */
 	number_to_move = (int) (yyg->yy_c_buf_p - yyg->yytext_ptr - 1);
@@ -4006,7 +4006,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 		if ( num_to_read > YY_READ_BUF_SIZE )
 			num_to_read = YY_READ_BUF_SIZE;
 
-		/* Read in more data. */
+		/* Read in more cell. */
 		YY_INPUT( (&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
 			yyg->yy_n_chars, num_to_read );
 
@@ -4580,7 +4580,7 @@ static void yynoreturn yy_fatal_error (const char* msg , yyscan_t yyscanner)
 
 /* Accessor  methods (get/set functions) to struct members. */
 
-/** Get the user-defined data for this scanner.
+/** Get the user-defined cell for this scanner.
  * @param yyscanner The scanner object.
  */
 YY_EXTRA_TYPE yyget_extra  (yyscan_t yyscanner)
@@ -4652,8 +4652,8 @@ char *yyget_text  (yyscan_t yyscanner)
     return yytext;
 }
 
-/** Set the user-defined data. This data is never touched by the scanner.
- * @param user_defined The data to be associated with this scanner.
+/** Set the user-defined cell. This cell is never touched by the scanner.
+ * @param user_defined The cell to be associated with this scanner.
  * @param yyscanner The scanner object.
  */
 void yyset_extra (YY_EXTRA_TYPE  user_defined , yyscan_t yyscanner)

@@ -9,6 +9,8 @@
  * 
  */
 #include "buffer/buffer_manager.h"
+#include <cstring>
+#include <utility>
 
 /**
  * @brief Construct a new Page:: Page object
@@ -30,16 +32,17 @@ void Page::initialize() {
     timeb t;
     ftime(&t);
     last_access_time = t.time * 1000 + t.millitm;
-    for (int i = 0;i < PAGESIZE;i++)
-        buffer_[i] = '\0';
+    memset(buffer_, 0, sizeof(char) * PAGESIZE);
+//    for (char & i : buffer_)
+//        i = '\0';
 }
 
 
 inline void Page::setFileName(std::string file_name) {
-    file_name_ = file_name;
+    file_name_ = std::move(file_name);
 }
 
-inline std::string Page::getFileName() {
+inline std::string Page::getFileName() const {
     return file_name_;
 }
 
@@ -47,7 +50,7 @@ inline void Page::setBlockId(int block_id) {
     block_id_ = block_id;
 }
 
-inline int Page::getBlockId() {
+inline int Page::getBlockId() const {
     return block_id_;
 }
 
@@ -55,7 +58,7 @@ inline void Page::setPinCount(int pin_count) {
     pin_count_ = pin_count;
 }
 
-inline int Page::getPinCount() {
+inline int Page::getPinCount() const {
     return pin_count_;
 }
 
@@ -63,7 +66,7 @@ inline void Page::setDirty(bool dirty) {
     dirty_ = dirty;
 }
 
-inline bool Page::isDirty() {
+inline bool Page::isDirty() const {
     return dirty_;
 }
 
@@ -71,7 +74,7 @@ inline void Page::setAvaliable(bool avaliable) {
     avaliable_ = avaliable;
 }
 
-inline bool Page::getAvaliable() {
+inline bool Page::getAvaliable() const {
     return avaliable_;
 }
 inline void Page::setTime(){

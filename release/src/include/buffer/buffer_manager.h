@@ -32,15 +32,15 @@ class Page {
         Page();
         void initialize();
         void setFileName(std::string file_name);
-        std::string getFileName();
+        std::string getFileName() const;
         void setBlockId(int block_id);
-        int getBlockId();
+        int getBlockId() const;
         void setPinCount(int pin_count);
-        int getPinCount();
+        int getPinCount() const;
         void setDirty(bool dirty);
-        bool isDirty();
+        bool isDirty() const;
         void setAvaliable(bool avaliable);
-        bool getAvaliable();
+        bool getAvaliable() const;
         void setTime();
         long long getTime();
         char* getBuffer();
@@ -52,6 +52,14 @@ class Page {
         bool dirty_; /**< dirty记录页是否被修改 */
         bool avaliable_; /**< avaliable标示页是否可以被使用(即将磁盘块load进该页) */
         long long last_access_time;
+
+        std::string getPageStrId(){
+            return getFileName() + std::to_string(getBlockId());
+        };
+
+        static std::string generatePageStrId(const std::string &file_path, int b_id){
+            return file_path + std::to_string(b_id);
+        }
 };
 
 /**
@@ -69,7 +77,7 @@ class BufferManager {
         void pinPage(int page_id); /**< 钉住一个页 */
         int unpinPage(int page_id); /**< 解除一个页的钉住状态(需要注意的是一个页可能被多次钉住，该函数只能解除一次),如果对应页的pin_count_为0，则返回-1 */
         int flushPage(pageId_t page_id); /**< 将对应内存页写入对应文件的对应块。 */
-        int getPageId(std::string file_name , int block_id); /**< 获取对应文件的对应块在内存中的页号，没有找到返回-1 */
+        int getPageId(const std::string& file_name , int block_id); /**< 获取对应文件的对应块在内存中的页号，没有找到返回-1 */
 
         static size_t getFileSize(std::string file_name){
             struct stat file_state{};
@@ -101,7 +109,7 @@ class BufferManager {
             }
         }
 
-        int getBlockNum(std::string fileName);
+        int getBlockNum(const std::string& fileName);
 
     private:
         Page* Frames; /**< 缓冲池，实际上就是一个元素为Page的数组，实际内存空间将分配在堆上 */

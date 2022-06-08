@@ -67,9 +67,9 @@ void RecordManager::InsertRecord(std::string table_name , const MemoryTuple& tup
     //异常检测完成
 
     int block_num = getBlockNum(table_name);
-//    //处理表文件大小为0的特殊情况
-//    if (block_num <= 0)
-//        block_num = 1;
+    //处理表文件大小为0的特殊情况
+    if (block_num <= 0)
+        block_num = 1;
 
     //获取表的最后一块的句柄
     pageId_t page_id;
@@ -85,6 +85,7 @@ void RecordManager::InsertRecord(std::string table_name , const MemoryTuple& tup
         r_page->tuple_at(0).serializeFromMemory(tuple);
         r_page->record_bytes = sizeof(record_page) + r_page->tuple_at(0).getBytes();
         buffer_manager->modifyPage(page_id);
+        buffer_manager->flushPage(page_id);
     }
     else if(r_page->record_bytes + r_page->tuple_at(0).getBytes() <= PAGESIZE){
         block_id = block_num - 1;
@@ -103,7 +104,8 @@ void RecordManager::InsertRecord(std::string table_name , const MemoryTuple& tup
         r_page->tuple_at(0).serializeFromMemory(tuple);
         r_page->record_bytes = sizeof(record_page) + r_page->tuple_at(0).getBytes();
 //        memcpy(r_page->tuples + r_page->tuple_num - 1, tuple, tuple_bytes);
-        buffer_manager->modifyPage(page_id);
+        buffer_manager->modifyPage(new_pId);
+        buffer_manager->flushPage(new_pId); // Make sure that the file size is correct. --CGF
     }
 
     for(int i = 0; i < attr.num; i++)
@@ -541,7 +543,7 @@ void RecordManager::CreateIndex(std::string table_name , const std::string& targ
 //获取文件大小
 int RecordManager::getBlockNum(std::string &table_fname) {
     size_t f_size = BufferManager::getFileSize(table_fname);
-    int block_num = (int)((f_size + BLOCKSIZE - 1) / BLOCKSIZE) + 1;
+    int block_num = (int)((f_size + BLOCKSIZE - 1) / BLOCKSIZE);
     return block_num;
 }
 
@@ -552,22 +554,39 @@ int RecordManager::getBlockNum(std::string &table_fname) {
 
 //判断插入的记录是否和其他记录冲突
 // CGF: 加速 and 防止返回的表过大而内存装不下
+// CGF: Only need to check conflict when the check_index is unique or primary key.
+// So there must be a index on it.
 bool RecordManager::isConflict(const MemoryTuple & v, const std::string &table_name , int check_index) {
     std::string table_path = PATH::RECORD_PATH + table_name;
-    int block_num = getBlockNum(table_path);
-    //获取表的属性
-    for(int i = 0; i < block_num; i++)
-    {
-        char* p = buffer_manager->getPage(table_path , i);
-        record_page* r_page = reinterpret_cast<record_page*> (p);
-        for(int j = 0; j < r_page->tuple_num; j++)
-        {
-            if(!r_page->tuple_at(j).isDeleted() && (r_page->tuple_at(j).cell[check_index] == v.at(check_index))){
-                return true;
-            }
+
+    std::string index_name;
+    auto index_info = catalog_manager->getIndex(table_name);
+    for (int i = 0; i < index_info.number; ++i){
+        if (index_info.location[i] == check_index){
+            index_name = index_info.index_name[i];
         }
     }
-    return false;
+    Index_t nearest;
+    auto ret = index_manager->CheckExistance(index_name, v.at(check_index), nearest);
+    if (ret){
+        std::cout << "Conflict -------------------------------------- ";
+    }
+    return index_manager->CheckExistance(index_name, v.at(check_index), nearest);
+
+//    int block_num = getBlockNum(table_path);
+//    //获取表的属性
+//    for(int i = 0; i < block_num; i++)
+//    {
+//        char* p = buffer_manager->getPage(table_path , i);
+//        record_page* r_page = reinterpret_cast<record_page*> (p);
+//        for(int j = 0; j < r_page->tuple_num; j++)
+//        {
+//            if(!r_page->tuple_at(j).isDeleted() && (r_page->tuple_at(j).cell[check_index] == v.at(check_index))){
+//                return true;
+//            }
+//        }
+//    }
+//    return false;
 }
 
 void RecordManager::DeleteInBlock(std::string table_name , int block_id , const Attribute& attr , int index , Where where, std::vector<Index_t>& record_ids){

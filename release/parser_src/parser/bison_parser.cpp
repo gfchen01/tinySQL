@@ -772,7 +772,7 @@ union yyalloc
 
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  67
-/* YYLAST -- Last index in YYTABLE.  */
+/* YYLAST -- Last has_index in YYTABLE.  */
 #define YYLAST   836
 
 /* YYNTOKENS -- Number of terminals.  */
@@ -2891,7 +2891,7 @@ int yychar;
 YY_INITIAL_VALUE (static YYSTYPE yyval_default;)
 YYSTYPE yylval YY_INITIAL_VALUE (= yyval_default);
 
-/* Location data for the lookahead symbol.  */
+/* Location cell for the lookahead symbol.  */
 static YYLTYPE yyloc_default
 # if defined HSQL_LTYPE_IS_TRIVIAL && HSQL_LTYPE_IS_TRIVIAL
   = { 1, 1, 1, 1 }
@@ -3012,7 +3012,7 @@ yysetstate:
         YYLTYPE *yyls1 = yyls;
 
         /* Each stack pointer address is followed by the size of the
-           data in use in that stack, in bytes.  This used to be a
+           cell in use in that stack, in bytes.  This used to be a
            conditional around just the two extra args, but that might
            be undefined if yyoverflow is a macro.  */
         yyoverflow (YY_("memory exhausted"),

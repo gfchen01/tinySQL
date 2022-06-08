@@ -53,6 +53,7 @@ public:
      */
     void DeleteId(const std::string& indexName, const Data &key);
 
+    bool CheckExistance(const std::string& indexName, const Data &key, Index_t &id);
     /**
      * @brief Find the Index based on the key (cell)
      * 
