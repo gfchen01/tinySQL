@@ -37,6 +37,11 @@ public:
     void updateRecord(std::string &table_name, std::vector<Where>& data);
 
     Attribute getTableAttributes(const std::string &table_name);
+
+    void showTables(){
+        catalog_manager.ShowAllTable();
+    }
+
 private:
     BufferManager bfm;
     RecordManager record_manager;

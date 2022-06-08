@@ -109,6 +109,8 @@ public:
      */
     void ShowTable(const std::string& table_name);
 
+    void ShowAllTable();
+
     std::string indexName2table(std::string &index_name) const{
         auto iter = indexName2tableName.find(index_name);
         if (iter == indexName2tableName.end()) throw DB_INDEX_NOT_FOUND;

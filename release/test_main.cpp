@@ -8,6 +8,30 @@
 #include <iostream>
 #include <filesystem>
 
+std::string create_table_query = "CREATE TABLE student "
+                "(id char(8), "
+                "name char(10), "
+                "age int, "
+                "score double, "
+                "primary key (id));";
+
+std::string drop_query = "DROP TABLE student;";
+
+std::string select_query = "SELECT student.name "
+                      "FROM student "
+                      "WHERE student.name = 'John' "
+                      "and student.age > 30 "
+                      "and student.teacher = 'Cathy';";
+
+std::string delete_query = "DELETE FROM students WHERE age between 20 and 30;";
+
+std::string create_index_query = "CREATE INDEX name_id on student(name);";
+
+std::string insert_query = "INSERT INTO student(id, name, age)"
+                      "VALUES('12789', 'Newman', 20);";
+
+std::string update_query = "update student set name = 'John' where name = 'Cathy';";
+
 void build_tiny_sql_folders(){
     if (!std::filesystem::is_directory(PATH::DATA_PATH)){
         std::filesystem::create_directory(PATH::DATA_PATH);

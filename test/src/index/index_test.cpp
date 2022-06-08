@@ -17,7 +17,7 @@ void IndexManager::CreateIndex(const std::string& indexName) {
     bpTree_Block* b = reinterpret_cast<bpTree_Block*>(raw);
 
     b->init(0, INVALID_BLOCK_ID);
-    _bfm->flushPage(header_id, fileName, 0);
+    _bfm->flushPage(header_id);
 }
 
 void IndexManager::DropIndex(const std::string &indexName) {

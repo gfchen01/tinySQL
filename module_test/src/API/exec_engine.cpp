@@ -1,4 +1,5 @@
 #include "API/exec_engine.h"
+#include <algorithm>
 
 void Exec_Engine::createTable(std::string &table_name, Attribute &attr){
     catalog_manager.CreateTable(table_name, attr); // Must run this first
@@ -44,6 +45,7 @@ void Exec_Engine::selectRecord(std::string &table_name, std::vector<std::string>
             result = record_manager.SelectRecord(table_name, attr_names, wheres);
         }
     }
+    std::sort(result.begin(), result.end());
 }
 
 Attribute Exec_Engine::getTableAttributes(const std::string &table_name) {

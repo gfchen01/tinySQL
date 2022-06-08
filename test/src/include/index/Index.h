@@ -76,7 +76,7 @@ public:
      */
     void InsertId(const std::string& indexName, const Data &Key, const Index_t &rec_ptr);
 
-private:
+//private:
     std::string _indexName;
     BufferManager* _bfm;
     Bp_tree<Data, Index_t> _index_tree;

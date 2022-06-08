@@ -19,6 +19,6 @@ namespace PATH {
 
 #define PAGESIZE 4096 /**< 每一页的大小为4KB */
 #define BLOCKSIZE PAGESIZE /**< 文件每一页的大小和PAGESIZE要保持相同 */
-#define MAXFRAMESIZE 10 /**< 最大页数为100 */
+#define MAXFRAMESIZE 100 /**< 最大页数为100 */
 
 #endif

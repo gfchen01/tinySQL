@@ -226,7 +226,7 @@ bool BP_TREE_T::FindValue(const key_t &key, value_t &result) const {
 
     db_size_t pos = n->leaf_biSearch(key);
     result = n->_k_rowid_pair[pos].second;
-    if (n->_k_rowid_pair[pos].first == key){
+    if (pos < n->_size && n->_k_rowid_pair[pos].first == key){
         _bfm->unpinPage(p_Id);
         return true;
     }
@@ -249,9 +249,14 @@ bool BP_TREE_T::FindRange(const key_t &lower_key, const key_t &upper_key, std::v
     if (rkey_leaf == nullptr || lkey_leaf == nullptr) throw DB_FAILED;
 
     db_size_t l_pos = lkey_leaf->leaf_biSearch(lower_key);
-    if (lkey_leaf->_k_rowid_pair[l_pos].first != lower_key) return false;
+//    if (lkey_leaf->_k_rowid_pair[l_pos].first != lower_key) return false;
     db_size_t r_pos = rkey_leaf->leaf_biSearch(upper_key);
-    if (rkey_leaf->_k_rowid_pair[r_pos].first != upper_key) return false;
+    if (rkey_leaf->_k_rowid_pair[r_pos].first != upper_key) {
+        if(r_pos != 0) --r_pos;
+        else{
+            std::cout << "BP Tree Error! -- Contact CGF" << std::endl;
+        }
+    }
 
     if (lkey_leaf->_block_id == rkey_leaf->_block_id){
         for (db_size_t pos = l_pos; pos <= r_pos; ++pos){
@@ -413,7 +418,7 @@ bool BP_TREE_T::Insert_in_Leaf(const key_t &key, const value_t &val, BP_TREE_LEA
 
     // TODO : Change this to throw
     // Only allow is_unique key
-    if (leaf->_size > 0 && leaf->_k_rowid_pair[pos].first == key) return false;
+    if (pos < leaf->_size /*&& leaf->_size > 0*/ && leaf->_k_rowid_pair[pos].first == key) return false;
 
     // Insert the key-val pair. The space should be pre-allocated at the initialization of node pages.
     memmove((void*)(leaf->_k_rowid_pair + pos + 1), (void*)(leaf->_k_rowid_pair + pos), sizeof(leaf->_k_rowid_pair[0]) * (leaf->_size - pos));
@@ -474,7 +479,7 @@ bool BP_TREE_T::Insert(const key_t &key, const value_t &val){
 
             _bfm->modifyPage(split_pageId);
             // Set the block_id, root_id, sibling, parent
-            split->init(_file_block_count - 1, leaf->_parent_block_id, INVALID_BLOCK_ID);
+            split->init(_file_block_count - 1, leaf->_parent_block_id, leaf->_next_block_id);
             leaf->_next_block_id = split->_block_id;
 
             // Insert in leaf first

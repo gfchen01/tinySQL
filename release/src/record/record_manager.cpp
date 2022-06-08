@@ -348,7 +348,7 @@ std::vector<MemoryTuple> RecordManager::SelectRecord(std::string table_name , st
             throw DB_TYPE_ERR;
         }
         // Return tuples length should equal attribute number of the table.
-        MemoryTuple tmp_tuple(attr.num);
+//        MemoryTuple tmp_tuple(attr.num);
         std::vector<MemoryTuple> tmp_tuples;
         std::vector<Index_t> tmp_record_id;
         if(j == 0){
@@ -720,7 +720,7 @@ int RecordManager::conditionDeleteInBlock(std::string table_name , const std::ve
 void RecordManager::conditionSelectInBlock(std::string table_name , const std::vector<Index_t>& record_id , std::vector<MemoryTuple>& v)
 {
     table_name = PATH::RECORD_PATH + table_name;
-    for(unsigned int i : record_id)
+    for(Index_t i : record_id)
     {
         int block_id = i / 1000;
         int tuple_id = i % 1000;
@@ -737,7 +737,7 @@ std::vector<Index_t> Union(const std::vector<Index_t>& a, const std::vector<Inde
                 for(unsigned int j : b)
                 {
                     if(i == j){
-                    result.push_back(i);
+                        result.push_back(i);
                     }
             }
         }

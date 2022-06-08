@@ -103,8 +103,8 @@ public:
 
 private:
     blockId_t _root_id = INVALID_BLOCK_ID;
-    std::string _index_fname; ///< The full name of the index file name.
-    db_size_t _file_block_count; ///< The block number of the index file.
+    std::string _index_fname; ///< The full name of the has_index file name.
+    db_size_t _file_block_count; ///< The block number of the has_index file.
 //    BP_TREE_BLOCK_T* header_ptr;
 //    pageId_t header_pageId; ///< The header page id in the buffer pool. The page is pinned.
 
@@ -222,11 +222,11 @@ bool BP_TREE_T::FindValue(const key_t &key, value_t &result) const {
     pageId_t p_Id;
     BP_TREE_LEAF_T* n = FindNode(key, p_Id);
 
-    if (n == nullptr) throw DB_KEY_NOT_FOUND;
+    if (n == nullptr) throw DB_INDEX_NOT_FOUND;
 
     db_size_t pos = n->leaf_biSearch(key);
     result = n->_k_rowid_pair[pos].second;
-    if (n->_k_rowid_pair[pos].first == key){
+    if (pos < n->_size && n->_k_rowid_pair[pos].first == key){
         _bfm->unpinPage(p_Id);
         return true;
     }
@@ -249,9 +249,14 @@ bool BP_TREE_T::FindRange(const key_t &lower_key, const key_t &upper_key, std::v
     if (rkey_leaf == nullptr || lkey_leaf == nullptr) throw DB_FAILED;
 
     db_size_t l_pos = lkey_leaf->leaf_biSearch(lower_key);
-    if (lkey_leaf->_k_rowid_pair[l_pos].first != lower_key) return false;
+//    if (lkey_leaf->_k_rowid_pair[l_pos].first != lower_key) return false;
     db_size_t r_pos = rkey_leaf->leaf_biSearch(upper_key);
-    if (rkey_leaf->_k_rowid_pair[r_pos].first != upper_key) return false;
+    if (rkey_leaf->_k_rowid_pair[r_pos].first != upper_key) {
+        if(r_pos != 0) --r_pos;
+        else{
+            std::cout << "BP Tree Error! -- Contact CGF" << std::endl;
+        }
+    }
 
     if (lkey_leaf->_block_id == rkey_leaf->_block_id){
         for (db_size_t pos = l_pos; pos <= r_pos; ++pos){
@@ -412,8 +417,8 @@ bool BP_TREE_T::Insert_in_Leaf(const key_t &key, const value_t &val, BP_TREE_LEA
     db_size_t pos = leaf->leaf_biSearch(key);
 
     // TODO : Change this to throw
-    // Only allow unique key
-    if (leaf->_k_rowid_pair[pos].first == key) return false;
+    // Only allow is_unique key
+    if (pos < leaf->_size /*&& leaf->_size > 0*/ && leaf->_k_rowid_pair[pos].first == key) return false;
 
     // Insert the key-val pair. The space should be pre-allocated at the initialization of node pages.
     memmove((void*)(leaf->_k_rowid_pair + pos + 1), (void*)(leaf->_k_rowid_pair + pos), sizeof(leaf->_k_rowid_pair[0]) * (leaf->_size - pos));
@@ -474,7 +479,7 @@ bool BP_TREE_T::Insert(const key_t &key, const value_t &val){
 
             _bfm->modifyPage(split_pageId);
             // Set the block_id, root_id, sibling, parent
-            split->init(_file_block_count - 1, leaf->_parent_block_id, INVALID_BLOCK_ID);
+            split->init(_file_block_count - 1, leaf->_parent_block_id, leaf->_next_block_id);
             leaf->_next_block_id = split->_block_id;
 
             // Insert in leaf first
@@ -642,7 +647,7 @@ bool BP_TREE_T::Delete(const key_t &key) {
         }
         return true;
     }
-    // Violate capacity constraint for leaf and non-root node
+        // Violate capacity constraint for leaf and non-root node
     else if (leaf->_size < (leaf->_max_size + 1) / 2){ // The upper bound of _max_size / 2
         // Make sure of the safety.
         assert(leaf->_size == (leaf->_max_size + 1) / 2 - 1);
@@ -772,40 +777,5 @@ bool BP_TREE_T::UpdateValue(const key_t &key, const value_t &new_val) {
     return true;
 }
 
-//KEY_VALUE_T_DECLARE
-//bool BP_TREE_T::FindRange(key_t lower_key, key_t upper_key, std::vector<value_t>& result) {
-//    const BP_NODE_T* lower_node = FindNode(lower_key);
-//    const BP_NODE_T* upper_node = FindNode(upper_key);
-//
-//    db_size_t start_id = lower_node->FindPos_at_Node(lower_key);
-//    db_size_t end_id = upper_node->FindPos_at_Node(upper_key);
-//
-//    if (start_id == -1 || end_id == -1){
-//        return false;
-//    }
-//    else{
-//        if (lower_node == upper_node){
-//            for (db_size_t i = start_id; i <= end_id; ++i){
-//                result.push_back(lower_node->value_field.at(i));
-//            }
-//        }
-//        else{
-//            for (db_size_t i = start_id; i < lower_node->value_field.size(); ++i){
-//                result.push_back(lower_node->value_field.at(i));
-//            }
-//            const BP_NODE_T* next = lower_node->ptr_field.front();
-//            while(next != upper_node){
-//                for (auto value : next->value_field){
-//                    result.push_back(value);
-//                }
-//                next = next->ptr_field.front();
-//            }
-//            for (db_size_t i = 0; i <= end_id; ++i) {
-//                result.push_back(upper_node->value_field.at(i));
-//            }
-//        }
-//        return true;
-//    }
-//}
 
 #endif

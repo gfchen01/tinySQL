@@ -21,13 +21,16 @@ void sortAttrNames(std::vector<std::string> &attr_names, Attribute& attr){
     if (attr_names.empty()) return;
     std::vector<std::string> sorted;
     for (int i = 0; i < attr.num; ++i){
-        for (const auto& attr_name : attr_names){
-            if (attr_name == attr.name[i]){
-                sorted.emplace_back(attr_name);
+        int j;
+        for (j = 0; j < attr_names.size(); ++j){
+            if (attr_names.at(j) == attr.name[i]){
+                sorted.emplace_back(attr_names.at(j));
                 break;
             }
         }
-        throw DB_COLUMN_NAME_NOT_EXIST; // Don't allow attr_names not in the correct range
+        if (j == attr_names.size()){
+            throw DB_COLUMN_NAME_NOT_EXIST; // Don't allow attr_names not in the correct range
+        }
     }
     attr_names = sorted;
 }
@@ -84,9 +87,13 @@ void Interface::showErrMsg(db_err_t &dbErr) {
         }
         case DB_PRIMARY_KEY_CONFLICT:{
             _os << "DB PRIMARY CONFLICT!\n";
+            break;
+        }
+        case DB_TABLE_NOT_EXIST:{
+            _os << "Table doesn't exist!\n";
         }
         default:{
-            _os << "DB ERROR\n";
+            _os << "DB ERROR: " << ERR_STR_MAP.at(dbErr) << std::endl;
         }
     }
 }
@@ -145,6 +152,7 @@ void Interface::run() {
 
         if (result.isValid() && result.size() > 0){
             for (size_t k = 0; k < result.size(); ++k){
+                ++loop_counter;
                 statement = result.getStatement(k);
                 switch (statement->type()) {
                     case hsql::kStmtSelect:{
@@ -164,12 +172,11 @@ void Interface::run() {
                         Attribute tableAttr;
                         try{
                             tableAttr = executor->getTableAttributes(tableName);
+                            sortAttrNames(attr_names, tableAttr);
                         }
                         catch(db_err_t &db_err){ // Table may not exist
                             showErrMsg(db_err);
                         }
-
-                        sortAttrNames(attr_names, tableAttr);
 
                         std::vector<MemoryTuple> res; // Result container
                         // TODO: Call executor
@@ -314,17 +321,26 @@ void Interface::run() {
 //                        executor->updateRecord(tableName, where_dat);
                         break;
                     }
+                    case hsql::kStmtShow :{
+                        const auto* show = dynamic_cast<const hsql::ShowStatement*>(statement);
+                        executor->showTables();
+                        break;
+                    }
                     default :{
-                        _os << ">> Unsupported valid SQL command. May support later.";
+                        _os << ">> Unsupported valid SQL command. May support later. \n";
                     }
                 }
-                _os << ">> Success." << std::endl;
+                _os << ">>> Success." << std::endl;
+            }
+            if (result.size() > 1){
+                _os << "---------------------------------------------\n";
+                _os << ">>> File query successfully executed!\n";
             }
         }
         else {
             for (auto character : query){
                 if (character != ' '){
-                    _os << result.errorMsg() << std::endl;
+                    _os <<">>" << result.errorMsg() << std::endl;
                     break;
                 }
             }

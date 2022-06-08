@@ -244,14 +244,9 @@ Index CatalogManager::getIndex(const std::string& table_name){
     char* buffer = _bfm->getPage(PATH::CATALOG_PATH + table_name,0);
     Index index_record;
     std::string table_info = buffer;
-    int current = 0;
-    for(int i = 0; i<2; i++){
-        while(table_info[current]!='#'){
-            current++;
-        }
-        current++;
-    }
-    table_info.erase(current + 1);
+    int current = table_info.find_last_of('#');
+//    table_info.erase(current + 1);
+    table_info.erase(0, current + 1);
 //    table_info = table_info.substr(current);
     current = 0;
     while(table_info[current]!=' '){
@@ -260,7 +255,7 @@ Index CatalogManager::getIndex(const std::string& table_name){
     std::string indexNum;
     indexNum = table_info.substr(0,current);
     index_record.number = atoi(indexNum.c_str());
-    table_info.erase(current + 1);
+    table_info.erase(0, current + 1);
 //    table_info = table_info.substr(current+1);
     if(index_record.number>10){
         throw;
@@ -271,7 +266,7 @@ Index CatalogManager::getIndex(const std::string& table_name){
             current++;
         }
         index_record.index_name[i] = table_info.substr(0,current);
-        table_info.erase(current + 1);
+        table_info.erase(0, current + 1);
 //        table_info = table_info.substr(current+1);
         current = 0;
         while(table_info[current]!=' '){
@@ -281,8 +276,8 @@ Index CatalogManager::getIndex(const std::string& table_name){
             current++;
         }
         index_record.location[i] = atoi(table_info.substr(0, current).c_str());
-        table_info.erase(current + 1);
-        table_info = table_info.substr(current+1);
+        table_info.erase(0, current + 1);
+//        table_info = table_info.substr(current+1);
     }
     return index_record;
 }
@@ -352,7 +347,7 @@ Attribute CatalogManager::getAttribute(const std::string& table_name){
 
     _bfm->unpinPage(p_id);
 
-    return std::move(attr_record);
+    return attr_record;
 }
 
 std::string CatalogManager::Index2Attr(const std::string& table_name, const std::string& attr_name, const std::string& index_name){
@@ -430,4 +425,12 @@ std::string CatalogManager::getIndexName(const std::string& table_name, const st
         }
     }
     throw DB_INDEX_NOT_FOUND;
+}
+
+void CatalogManager::ShowAllTable() {
+    std::cout << "----------------------------------------------\n";
+    for (const auto & name : tableNames){
+        ShowTable(name);
+        std::cout << "-------------------------------------------------\n";
+    }
 }
