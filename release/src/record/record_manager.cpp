@@ -655,9 +655,11 @@ void RecordManager::SelectInBlock(std::string table_name , int block_id , const 
     r = reinterpret_cast<record_page*>(p);
     for(int i = 0; i < r->tuple_num; i++)
     {
-        std::vector<Data> d = r->tuple_at(i).getData();
-        if (judge(d[index], where.data, where.relation_operator)){
-            record_ids.push_back(block_id * 1000 + i);
+        if(!r->tuple_at(i).isDeleted()){
+            std::vector<Data> d = r->tuple_at(i).getData();
+            if (judge(d[index], where.data, where.relation_operator)){
+                record_ids.push_back(block_id * 1000 + i);
+            }
         }
 //        if(!r->tuple_at(i).isDeleted())
 //        {

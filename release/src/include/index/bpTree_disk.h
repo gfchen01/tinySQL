@@ -251,7 +251,8 @@ bool BP_TREE_T::FindRange(const key_t &lower_key, const key_t &upper_key, std::v
     db_size_t l_pos = lkey_leaf->leaf_biSearch(lower_key);
 //    if (lkey_leaf->_k_rowid_pair[l_pos].first != lower_key) return false;
     db_size_t r_pos = rkey_leaf->leaf_biSearch(upper_key);
-    if (rkey_leaf->_k_rowid_pair[r_pos].first != upper_key) {
+
+    if (r_pos >= rkey_leaf->_size || rkey_leaf->_k_rowid_pair[r_pos].first != upper_key) {
         if(r_pos != 0) --r_pos;
         else{
             std::cout << "BP Tree Error! -- Contact CGF" << std::endl;
