@@ -107,6 +107,7 @@ void CatalogManager::rewriteAttribute(const std::string &table_name, const Attri
     str.replace(attr_index_start, (str.size() - attr_index_start), attr_index_info_str);
 
     strcpy(buffer,str.c_str());
+    _bfm->flushPage(buffer_pId);
 }
 
 void CatalogManager::CreateTable(const std::string& table_name, Attribute &attr){
@@ -157,6 +158,7 @@ void CatalogManager::CreateTable(const std::string& table_name, Attribute &attr)
     str += "\n";
 
     strcpy(buffer,str.c_str());
+    _bfm->flushPage(buffer_pId);
 }
 
 void CatalogManager::DropTable(const std::string& table_name){
@@ -198,8 +200,6 @@ void CatalogManager::UpdateIndex(const std::string& table_name, const std::strin
     }
     ++index_record.number;
     rewriteAttribute(table_name, attr, index_record);
-//    DropTable(table_name);
-//    CreateTable(table_name,attr);
 
 /*
      // 用參數table_name 和buffer_Manager要 相應的block (getPage)
@@ -235,8 +235,6 @@ void CatalogManager::DropIndex(const std::string& table_name, const std::string&
     index_record.location[number] = index_record.location[theLast];
 
     rewriteAttribute(table_name, attr, index_record);
-//    DropTable(table_name);
-//    CreateTable(table_name, attr);
 }
 
 Index CatalogManager::getIndex(const std::string& table_name){

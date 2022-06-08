@@ -21,12 +21,8 @@
     <list default="true" id="712c2f49-e0cb-4c43-b579-db61b43c4eaa" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/API/interface.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/API/interface.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/buffer/buffer_manager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/buffer/buffer_manager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/include/buffer/buffer_manager.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/include/buffer/buffer_manager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/include/index/Index.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/include/index/Index.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/include/index/bpTree_disk.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/include/index/bpTree_disk.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/index/index.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/index/index.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/record/record_manager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/record/record_manager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/catalog/Catalog_Manager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/catalog/Catalog_Manager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/include/API/interface.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/include/API/interface.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test_main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/test_main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -111,7 +107,7 @@
       <workItem from="1654502825850" duration="19902000" />
       <workItem from="1654529545769" duration="3467000" />
       <workItem from="1654564686367" duration="17349000" />
-      <workItem from="1654590729881" duration="24155000" />
+      <workItem from="1654590729881" duration="27201000" />
     </task>
     <servers />
   </component>

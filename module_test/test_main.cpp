@@ -49,15 +49,7 @@ void build_tiny_sql_folders(){
 
 int main()
 {
-    std::ifstream ifs;
-    ifs.open("QueryInsert2.txt", std::fstream::in);
-
-//    std::ofstream ofs;
-//    ofs.open("Output.txt", std::fstream::out);
     build_tiny_sql_folders();
-//    Interface anInterface(std::cin, std::cout);
     Interface anInterface(std::cin, std::cout);
     anInterface.run();
-
-//    ifs.close();
 }

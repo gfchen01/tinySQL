@@ -27,6 +27,11 @@ private:
     std::istream &_is;
     std::ostream &_os;
     void parseWhere(hsql::Expr *Clause, std::vector<Where> &where_vec);
+    /**
+     * @brief Read from a SQL query file.
+     * @param query [out] The output query.
+     */
+    void readFromFile(std::string &query);
 };
 
 #endif //TINYSQL_TEST_INTERFACE_H

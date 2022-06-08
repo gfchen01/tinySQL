@@ -7,6 +7,7 @@
 #include <ios>
 #include <iostream>
 #include <fstream>
+#include <strstream>
 #include <cassert>
 #include <iomanip>
 
@@ -90,20 +91,53 @@ void Interface::showErrMsg(db_err_t &dbErr) {
     }
 }
 
+void Interface::readFromFile(std::string &query) {
+    std::string file_path;
+    _os << "Input file name(relative path, end with ENTER): > ";
+    _os.flush();
+
+    _is.clear();
+    _is >> file_path;
+//    std::getline(_is, file_path);
+
+    std::ifstream ifs;
+    ifs.open(file_path, std::fstream::in);
+    if (!ifs.is_open()){
+        _os << "File doesn't exist." << std::endl;
+        _os.flush();
+        return;
+    }
+
+    std::ostrstream str_buf;
+    char ch;
+    while(str_buf && ifs.get(ch)){
+        str_buf.put(ch);
+    }
+    query = str_buf.str();
+    return;
+}
+
+
 void Interface::run() {
     std::string query;
     hsql::SQLParserResult result;
     const hsql::SQLStatement* statement;
 
+    _os << "TinySQL started.\nInput below.\n";
+    _os.flush();
+
     int loop_counter = 0;
     while(true){
-        if (loop_counter++ % 1000 == 0){
-            std::cout << "Critical point" << std::endl;
-        }
         query.clear();
         std::getline(_is, query, ';');
 
-        if (_is.eof()){
+        if (query.front() == '\n') query.erase(0, 1);
+        if (query.back() == '\n') query.erase(query.size() - 1, 1);
+
+        if (query == "READ FILE"){
+            readFromFile(query);
+        }
+        else if (_is.eof()){
             return;
         }
 
@@ -284,8 +318,8 @@ void Interface::run() {
                         _os << ">> Unsupported valid SQL command. May support later.";
                     }
                 }
+                _os << ">> Success." << std::endl;
             }
-            _os << ">> Success." << std::endl;
         }
         else {
             for (auto character : query){
