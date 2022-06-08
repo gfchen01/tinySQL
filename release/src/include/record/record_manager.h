@@ -55,48 +55,7 @@ struct record_page{
     DiskTuple& operator[](T offset) = delete;
 };
 
-
-template <typename T>
-bool judge(T a , T b , const Where& relation) {
-    switch(relation.relation_operator) {
-        case Operator::LT:{
-            if (a < b)
-                return true;
-            else
-                return false;
-        };break;
-        case Operator::LE:{
-            if (a <= b)
-                return true;
-            else
-                return false;
-        };break;
-        case Operator::EQ:{
-            if (a == b)
-                return true;
-            else
-                return false;
-        };break;
-        case Operator::GE:{
-            if (a >= b)
-                return true;
-            else
-                return false;
-        };break;
-        case Operator::GT:{
-            if (a > b)
-                return true;
-            else
-                return false;
-        };break;
-        case Operator::NE:{
-            if (a != b)
-                return true;
-            else
-                return false;
-        };break;
-    }
-}
+//bool judge(const Data& a , const Data& b , Operator relation);
 
 std::vector<Index_t> Union(const std::vector<Index_t>& a, const std::vector<Index_t>& b);
 

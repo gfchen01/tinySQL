@@ -123,6 +123,18 @@ struct Data{
         }
     }
 
+    friend bool operator<=(const Data& d_l, const Data& d_r){
+        return (d_l < d_r || d_l == d_r);
+    }
+
+    friend bool operator>=(const Data& d_l, const Data& d_r){
+        return !(d_l < d_r);
+    }
+
+    friend bool operator>(const Data& d_l, const Data& d_r){
+        return !(d_l <= d_r);
+    }
+
     friend bool operator!=(const Data& d_l, const Data& d_r){
         return !(d_l == d_r);
     }

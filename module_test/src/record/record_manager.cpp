@@ -10,6 +10,29 @@
  */
 #include "record/record_manager.h"
 
+bool judge(const Data& a , const Data& b , Operator relation){
+    switch(relation) {
+        case Operator::LT:{
+            return a < b;
+        }
+        case Operator::LE:{
+            return a <= b;
+        }
+        case Operator::EQ:{
+            return a == b;
+        }
+        case Operator::GE:{
+            return a >= b;
+        }
+        case Operator::GT:{
+            return a > b;
+        }
+        case Operator::NE:{
+            return a != b;
+        }
+    }
+}
+
 //输入：表名
 //输出：void
 //功能：建立表文件
@@ -599,25 +622,29 @@ void RecordManager::DeleteInBlock(std::string table_name , int block_id , const 
     for(int i = 0; i < r->tuple_num; i++)
     {
         std::vector<Data> d = r->tuple_at(i).getData();
-        switch(attr.type[index]){
-            case BASE_SQL_ValType::INT:{
-                if(judge(d[index].data_meta.i_data, where.data.data_meta.i_data, where) == true){
-                    record_ids.push_back(block_id * 1000 + i);
-                }
-            };break;
-            case BASE_SQL_ValType::FLOAT:{
-                if(judge(d[index].data_meta.f_data, where.data.data_meta.f_data, where) == true){
-                    r->tuple_at(i).setDeleted();
-                    record_ids.push_back(block_id * 1000 + i);
-                }
-            }break;
-            default:{
-                if(judge(d[index].data_meta.s_data, where.data.data_meta.s_data, where) == true){
-                    r->tuple_at(i).setDeleted();
-                    record_ids.push_back(block_id * 1000 + i);
-                }
-            }
+        if (judge(d[index], where.data, where.relation_operator)){
+            r->tuple_at(i).setDeleted();
+            record_ids.push_back(block_id * 1000 + i);
         }
+//        switch(attr.type[index]){
+//            case BASE_SQL_ValType::INT:{
+//                if(judge(d[index].data_meta.i_data, where.data.data_meta.i_data, where) == true){
+//                    record_ids.push_back(block_id * 1000 + i);
+//                }
+//            };break;
+//            case BASE_SQL_ValType::FLOAT:{
+//                if(judge(d[index].data_meta.f_data, where.data.data_meta.f_data, where) == true){
+//                    r->tuple_at(i).setDeleted();
+//                    record_ids.push_back(block_id * 1000 + i);
+//                }
+//            }break;
+//            default:{
+//                if(judge(d[index].data_meta.s_data, where.data.data_meta.s_data, where) == true){
+//                    r->tuple_at(i).setDeleted();
+//                    record_ids.push_back(block_id * 1000 + i);
+//                }
+//            }
+//        }
     }
 }
 
@@ -628,27 +655,31 @@ void RecordManager::SelectInBlock(std::string table_name , int block_id , const 
     r = reinterpret_cast<record_page*>(p);
     for(int i = 0; i < r->tuple_num; i++)
     {
-        if(!r->tuple_at(i).isDeleted())
-        {
-            std::vector<Data> d = r->tuple_at(i).getData();
-            switch(attr.type[index]){
-                case BASE_SQL_ValType::INT:{
-                    if(judge(d[index].data_meta.i_data, where.data.data_meta.i_data, where) == true){
-                        record_ids.push_back(block_id * 1000 + i);
-                    }
-                }break;
-                case BASE_SQL_ValType::FLOAT:{
-                    if(judge(d[index].data_meta.f_data, where.data.data_meta.f_data, where) == true){
-                        record_ids.push_back(block_id * 1000 + i);
-                    }
-                }break;
-                default:{
-                    if(judge(d[index].data_meta.s_data, where.data.data_meta.s_data, where) == true){
-                        record_ids.push_back(block_id * 1000 + i);
-                    }
-                }
-            }
+        std::vector<Data> d = r->tuple_at(i).getData();
+        if (judge(d[index], where.data, where.relation_operator)){
+            record_ids.push_back(block_id * 1000 + i);
         }
+//        if(!r->tuple_at(i).isDeleted())
+//        {
+//            std::vector<Data> d = r->tuple_at(i).getData();
+//            switch(attr.type[index]){
+//                case BASE_SQL_ValType::INT:{
+//                    if(judge(d[index].data_meta.i_data, where.data.data_meta.i_data, where) == true){
+//                        record_ids.push_back(block_id * 1000 + i);
+//                    }
+//                }break;
+//                case BASE_SQL_ValType::FLOAT:{
+//                    if(judge(d[index].data_meta.f_data, where.data.data_meta.f_data, where) == true){
+//                        record_ids.push_back(block_id * 1000 + i);
+//                    }
+//                }break;
+//                default:{
+//                    if(judge(d[index].data_meta.s_data, where.data.data_meta.s_data, where) == true){
+//                        record_ids.push_back(block_id * 1000 + i);
+//                    }
+//                }
+//            }
+//        }
     }
 }
 void RecordManager::searchWithIndex(std::string &table_name , std::string &target_attr , const Where& where , std::vector<Index_t>& record_ids) {
