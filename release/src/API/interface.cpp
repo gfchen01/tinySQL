@@ -145,7 +145,7 @@ void Interface::run() {
             readFromFile(query);
         }
         else if (_is.eof()){
-            return;
+            break;
         }
 
         hsql::SQLParser::parse(query, &result);
@@ -221,13 +221,13 @@ void Interface::run() {
                                     }
                                 }
                             }
-                            executor->createTable(tableName, attr);
-//                            try{
-//                                executor->createTable(tableName, attr);
-//                            }
-//                            catch (db_err_t &db_err){
-//                                showErrMsg(db_err);
-//                            }
+//                            executor->createTable(tableName, attr);
+                            try{
+                                executor->createTable(tableName, attr);
+                            }
+                            catch (db_err_t &db_err){
+                                showErrMsg(db_err);
+                            }
                             break;
                         }
                         else if(create->type == hsql::kCreateIndex){
@@ -236,14 +236,14 @@ void Interface::run() {
                             std::string attrName;
                             for(auto col : *(create->indexColumns)){
                                 attrName = col;
-                                executor->createIndex(tableName, indexName, attrName);
+//                                executor->createIndex(tableName, indexName, attrName);
 
-//                                try{
-//                                    executor->createIndex(tableName, indexName, attrName);
-//                                }
-//                                catch (db_err_t &db_err){
-//                                    showErrMsg(db_err);
-//                                }
+                                try{
+                                    executor->createIndex(tableName, indexName, attrName);
+                                }
+                                catch (db_err_t &db_err){
+                                    showErrMsg(db_err);
+                                }
                             }
                         }
                         else{
@@ -283,13 +283,13 @@ void Interface::run() {
                         //Assume the most simple delete, that the expr represents the common where.
                         std::vector<Where> where_clause_dat;
                         parseWhere(del->expr, where_clause_dat);
-//                        try{
-//                            executor->deleteRecord(tableName, where_clause_dat);
-//                        }
-//                        catch (db_err_t &db_err){
-//                            showErrMsg(db_err);
-//                        }
-                        executor->deleteRecord(tableName, where_clause_dat);
+                        try{
+                            executor->deleteRecord(tableName, where_clause_dat);
+                        }
+                        catch (db_err_t &db_err){
+                            showErrMsg(db_err);
+                        }
+//                        executor->deleteRecord(tableName, where_clause_dat);
                         break;
 
                     }
@@ -311,16 +311,16 @@ void Interface::run() {
                         }
                         break;
                     }
-                    case hsql::kStmtUpdate :{
-                        const auto* update = dynamic_cast<const hsql::UpdateStatement*>(statement);
-                        std::string tableName = update->table->name;
-
-                        std::vector<Where> where_dat;
-                        parseWhere(update->where, where_dat);
-                        //TODO : Add update content
-//                        executor->updateRecord(tableName, where_dat);
-                        break;
-                    }
+//                    case hsql::kStmtUpdate :{
+//                        const auto* update = dynamic_cast<const hsql::UpdateStatement*>(statement);
+//                        std::string tableName = update->table->name;
+//
+//                        std::vector<Where> where_dat;
+//                        parseWhere(update->where, where_dat);
+//                        //TODO : Add update content
+////                        executor->updateRecord(tableName, where_dat);
+//                        break;
+//                    }
                     case hsql::kStmtShow :{
                         const auto* show = dynamic_cast<const hsql::ShowStatement*>(statement);
                         executor->showTables();
@@ -347,7 +347,8 @@ void Interface::run() {
         }
         result.reset();
     }
-    _os << "Execute: " << loop_counter << " queries." << std::endl;
+    _os << ">>Execute: " << loop_counter << " queries." << std::endl;
+    _os << ">>Goodbye." << std::endl;
 }
 
 

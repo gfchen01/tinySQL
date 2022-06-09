@@ -9,7 +9,6 @@
  *
  */
 #include "record/record_manager.h"
-#include <algorithm>
 
 bool judge(const Data& a , const Data& b , Operator relation){
     switch(relation) {
@@ -656,11 +655,9 @@ void RecordManager::SelectInBlock(std::string table_name , int block_id , const 
     r = reinterpret_cast<record_page*>(p);
     for(int i = 0; i < r->tuple_num; i++)
     {
-        if(!r->tuple_at(i).isDeleted()){
-            std::vector<Data> d = r->tuple_at(i).getData();
-            if (judge(d[index], where.data, where.relation_operator)){
-                record_ids.push_back(block_id * 1000 + i);
-            }
+        std::vector<Data> d = r->tuple_at(i).getData();
+        if (judge(d[index], where.data, where.relation_operator)){
+            record_ids.push_back(block_id * 1000 + i);
         }
 //        if(!r->tuple_at(i).isDeleted())
 //        {
@@ -703,16 +700,13 @@ void RecordManager::searchWithIndex(std::string &table_name , std::string &targe
             strcpy(tmp_data.data_meta.s_data, "");
         }
         index_manager->FindId(index_name , tmp_data , where.data , record_ids);
-//        if(where.relation_operator == Operator::LE){
-//            index_manager->FindId(index_name, where.data, recordID);
-//            record_ids.push_back(recordID);
-//        }
         if(where.relation_operator == Operator::LT){
-            if (index_manager->FindId(index_name, where.data, recordID)){
-                // The key exists in the tree. Remove it.
+            index_manager->FindId(index_name, where.data, recordID);
+            if(recordID == record_ids[record_ids.size() - 1])
+                //record_ids.push_back(recordID);
                 record_ids.pop_back();
-            }
         }
+
     }
     else if (where.relation_operator == Operator::GT|| where.relation_operator == Operator::GE) {
         if (where.data.type == BASE_SQL_ValType::INT) {
@@ -728,23 +722,23 @@ void RecordManager::searchWithIndex(std::string &table_name , std::string &targe
             strcpy(tmp_data.data_meta.s_data, "~~~~~~~~");
         }
         index_manager->FindId(index_name , where.data , tmp_data , record_ids);
-//        if(where.relation_operator == Operator::GE){
-//            index_manager->FindId(index_name, where.data, recordID);
-//            record_ids.push_back(recordID);
-//        }
-        if (where.relation_operator == Operator::GT){
-            if(index_manager->FindId(index_name, where.data, recordID)){
-                record_ids.erase(record_ids.begin());
-            }
+        if(where.relation_operator == Operator::GT){
+            index_manager->FindId(index_name, where.data, recordID);
+            if(recordID == record_ids[record_ids.size() - 1])
+                //record_ids.push_back(recordID);
+                record_ids.pop_back();
         }
+        /*index_manager->FindId(index_name , where.data , tmp_data , record_ids);
+        if(where.relation_operator == Operator::GE){
+            index_manager->FindId(index_name, where.data, recordID);
+            record_ids.push_back(recordID);
+        }*/
+
     }
     else{
-        if(index_manager->FindId(index_name, where.data, recordID)){
-            // FindId returns true when the key actually exists.
-            record_ids.push_back(recordID);
-        }
+        index_manager->FindId(index_name, where.data, recordID);
+        record_ids.push_back(recordID);
     }
-//    std::sort(record_ids.begin(), record_ids.end());
 }
 
 //在块中进行条件删除

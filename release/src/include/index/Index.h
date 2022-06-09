@@ -57,13 +57,25 @@ public:
     /**
      * @brief Find the Index based on the key (cell)
      * 
-     * @param tableName 
+     * @param indexName name of the index
      * @param key[in] The cell to search for, as a key.
      * @param result[out] The container for result
      * @throw DB_KEY_NOT_FOUND
+     * @return true if the key actually exists in the tree.
      */
     bool FindId(const std::string& indexName, const Data &key, Index_t &result);
 
+    /**
+     * @brief Find the Indexes based on given key range.
+     * Return the indexes in between. If the key exists in the tree, the key is returned as well.
+     *
+     * @param indexName Name of the index
+     * @param lower_key Smaller key.
+     * @param upper_key Greater key.
+     * @param result [out] Search result
+     *
+     * @return
+     */
     bool FindId(const std::string& indexName, const Data &lower_key, const Data &upper_key, std::vector<Index_t>& result);
 
     /**

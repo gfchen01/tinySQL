@@ -7,9 +7,7 @@ IndexManager::IndexManager(BufferManager* bfm): _bfm(bfm), _index_tree(bfm) {}
 
 void IndexManager::CreateIndex(const std::string& indexName) {
     std::string fileName = PATH::INDEX_PATH + indexName;
-    FILE* f = fopen(fileName.c_str(), "w");
-    if (f == NULL) throw DB_FILE_NOT_FOUND;
-    fclose(f);
+    _bfm->createEmptyFile(fileName);
 
     pageId_t header_id;
     char* raw = _bfm->getPage(fileName, 0, header_id);
@@ -62,7 +60,7 @@ bool IndexManager::CheckExistance(const std::string &indexName, const Data &key,
         exists = _index_tree.FindValue(key, id);
     }
     catch(db_err_t& db_err){
-        if (db_err == DB_INDEX_NOT_FOUND) exists = false; // When the index file is empty
+        if (db_err == DB_BPTREE_EMPTY) exists = false; // When the index file is empty
         else throw db_err;
     }
     return exists;

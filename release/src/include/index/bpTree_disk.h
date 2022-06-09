@@ -222,10 +222,12 @@ bool BP_TREE_T::FindValue(const key_t &key, value_t &result) const {
     pageId_t p_Id;
     BP_TREE_LEAF_T* n = FindNode(key, p_Id);
 
-    if (n == nullptr) throw DB_INDEX_NOT_FOUND;
+    if (n == nullptr) throw DB_BPTREE_EMPTY;
 
     db_size_t pos = n->leaf_biSearch(key);
-    result = n->_k_rowid_pair[pos].second;
+    if (pos < n->_size){
+        result = n->_k_rowid_pair[pos].second;
+    }
     if (pos < n->_size && n->_k_rowid_pair[pos].first == key){
         _bfm->unpinPage(p_Id);
         return true;
@@ -246,7 +248,7 @@ bool BP_TREE_T::FindRange(const key_t &lower_key, const key_t &upper_key, std::v
     pageId_t rkey_pId;
     BP_TREE_LEAF_T* rkey_leaf = FindNode(upper_key, rkey_pId);
 
-    if (rkey_leaf == nullptr || lkey_leaf == nullptr) throw DB_FAILED;
+    if (rkey_leaf == nullptr || lkey_leaf == nullptr) throw DB_BPTREE_EMPTY;
 
     db_size_t l_pos = lkey_leaf->leaf_biSearch(lower_key);
 //    if (lkey_leaf->_k_rowid_pair[l_pos].first != lower_key) return false;
