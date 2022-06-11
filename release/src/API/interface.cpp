@@ -4,6 +4,7 @@
 
 #include "API/interface.h"
 #include "share/data_t.h"
+#include "share/timer.h"
 #include <ios>
 #include <iostream>
 #include <fstream>
@@ -121,7 +122,6 @@ void Interface::readFromFile(std::string &query) {
         str_buf.put(ch);
     }
     query = str_buf.str();
-    return;
 }
 
 
@@ -132,6 +132,8 @@ void Interface::run() {
 
     _os << "TinySQL started.\nInput below.\n";
     _os.flush();
+
+    TimerClock timer;
 
     int loop_counter = 0;
     while(true){
@@ -151,6 +153,9 @@ void Interface::run() {
         hsql::SQLParser::parse(query, &result);
 
         if (result.isValid() && result.size() > 0){
+
+            timer.update();
+
             for (size_t k = 0; k < result.size(); ++k){
                 ++loop_counter;
                 statement = result.getStatement(k);
@@ -336,6 +341,7 @@ void Interface::run() {
                 _os << "---------------------------------------------\n";
                 _os << ">>> File query successfully executed!\n";
             }
+            _os << "Executed " << result.size() << " queries in " << timer.getTimerMilliSec() << " ms.\n";
         }
         else {
             for (auto character : query){
