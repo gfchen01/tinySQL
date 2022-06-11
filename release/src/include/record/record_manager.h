@@ -140,8 +140,10 @@ private:
     bool isConflict(const MemoryTuple &v, const std::string& tableName, int check_index);
     //带索引查找
     void searchWithIndex(std::string &table_name , std::string &target_attr , const Where& where , std::vector<Index_t>& record_ids);
+
+//    void deleteInIndex(std::string &table_path, std::string &target_attr, std::ve)
     //在块中进行条件删除
-    int conditionDeleteInBlock(std::string table_name , const std::vector<Index_t>& record_id);
+    int conditionDeleteInBlock(const std::string& table_name , const std::vector<Index_t>& record_id);
     void DeleteInBlock(std::string table_name , int block_id , const Attribute& attr , int index , Where where, std::vector<Index_t>& record_ids);
     //在块中进行条件查询
     void conditionSelectInBlock(std::string table_name , const std::vector<Index_t>& record_id , std::vector<MemoryTuple>& v);

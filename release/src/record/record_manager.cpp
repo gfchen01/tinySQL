@@ -264,6 +264,7 @@ int RecordManager::DeleteRecord(std::string table_name , std::vector<Where> wher
             tmp_record_id.resize(0);
         }
     }
+
     return conditionDeleteInBlock(table_name, result_record_id);
 }
 
@@ -616,9 +617,11 @@ bool RecordManager::isConflict(const MemoryTuple & v, const std::string &table_n
 void RecordManager::DeleteInBlock(std::string table_name , int block_id , const Attribute& attr , int index , Where where, std::vector<Index_t>& record_ids){
     //获取当前块的句柄
     table_name = PATH::RECORD_PATH + table_name;//新增
-    char* p = buffer_manager->getPage(table_name , block_id);
+    pageId_t pId;
+    char* p = buffer_manager->getPage(table_name , block_id, pId);
     record_page* r;
     r = reinterpret_cast<record_page*> (p);
+    buffer_manager->modifyPage(pId);
     //将当前块写回文件
     for(int i = 0; i < r->tuple_num; i++)
     {
@@ -748,17 +751,24 @@ void RecordManager::searchWithIndex(std::string &table_name , std::string &targe
 }
 
 //在块中进行条件删除
-int RecordManager::conditionDeleteInBlock(std::string table_name , const std::vector<Index_t>& record_id) {
+int RecordManager::conditionDeleteInBlock(const std::string& table_name , const std::vector<Index_t>& record_id) {
     //获取当前块的句柄
-    table_name = PATH::RECORD_PATH + table_name;//新增
+    std::string table_path = PATH::RECORD_PATH + table_name;//新增
+    Index index_head = catalog_manager->getIndex(table_name);
     for(unsigned int i : record_id)
     {
         int block_id = i / 1000;
         int tuple_id = i % 1000;
-        char* p = buffer_manager->getPage(table_name , block_id);
+        char* p = buffer_manager->getPage(table_path , block_id);
         record_page* r = reinterpret_cast<record_page*> (p);
         r->tuple_at(tuple_id).setDeleted();
-        int page_id = buffer_manager->getPageId(table_name , block_id);
+        int page_id = buffer_manager->getPageId(table_path , block_id);
+
+        for (int j = 0; j < index_head.number; ++j){
+            index_manager->DeleteId(index_head.index_name[j],
+                                    r->tuple_at(tuple_id).getData().at(index_head.location[j]));
+        }
+
         buffer_manager->modifyPage(page_id);
     }
     return (int)record_id.size();
@@ -774,7 +784,9 @@ void RecordManager::conditionSelectInBlock(std::string table_name , const std::v
         int tuple_id = i % 1000;
         char* p = buffer_manager->getPage(table_name , block_id);
         record_page* r = reinterpret_cast<record_page*>(p);
-        v.emplace_back(r->tuple_at(tuple_id).deserializeToMemory());
+        if (!r->tuple_at(tuple_id).isDeleted()){
+            v.emplace_back(r->tuple_at(tuple_id).deserializeToMemory());
+        }
     }
 }
 

@@ -379,6 +379,7 @@ void CatalogManager::ShowTable(const std::string& table_name){
 
     std::string attr_type;
     std::cout<<"Attribute number:"<<attr_record.num<<std::endl;
+    std::cout << "########\n";
     for(int i = 0; i<attr_record.num; i++){
         switch (attr_record.type[i]){
             case BASE_SQL_ValType::INT:
@@ -392,17 +393,18 @@ void CatalogManager::ShowTable(const std::string& table_name){
                 break;
 
         }
-        std::cout<<"Attr_type"<<attr_type<<std::endl;
-        std::cout<<"Attr_name:"<<attr_record.name[i]<<std::endl;
-        std::cout << "Attr_unique" << attr_record.is_unique[i] << std::endl;
+        std::cout<<"Attr_type : ["<<attr_type << "]\n";
+        std::cout<<"Attr_name : ["<<attr_record.name[i]<<"]\n";
+        std::cout << "Attr_unique : [" << (attr_record.is_unique[i] ? "Yes" : "No") << "]\n";
         if(i == attr_record.primary_Key){
             std::cout<<"Primary Key"<<std::endl;
         }
+        std::cout << "#######\n";
     }
-    std::cout<<"Index number:"<<index_record.number<<std::endl;
+    std::cout<<"Index number : ["<<index_record.number<<"]\n";
     for (int i = 0; i<index_record.number; i++){
-        std::cout<<"Index name:"<<index_record.index_name[i]<<std::endl;
-        std::cout<<"Index location"<<index_record.location[i]<<std::endl;
+        std::cout<<"Index name : ["<<index_record.index_name[i]<<"]\n";
+        std::cout<<"Index location : ["<<index_record.location[i]<< "]\n";
     }
 }
 
